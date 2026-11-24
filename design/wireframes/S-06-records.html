@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S-06 기록 목록 — 와이어프레임</title>
+<link rel="stylesheet" href="wireframe.css">
+<script src="wireframe.js"></script>
+<style>
+  .page-head { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 24px; border-bottom: 1.5px solid var(--ink); flex: none; }
+  .page-head .title { font-size: 18px; font-weight: 700; }
+  .rec { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rec th { text-align: left; font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 8px 12px; border-bottom: 1.5px solid var(--ink); }
+  .rec td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); }
+  .rec .r { text-align: right; }
+  .rec tr.best td { background: var(--fill); font-weight: 700; }
+  .rec tr:hover td { background: #f7f7f7; }
+  .g { display: inline-flex; width: 26px; height: 26px; border: 2px solid var(--ink); align-items: center; justify-content: center; font-weight: 900; }
+  .card { border: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 8px; background: var(--frame); position: relative; }
+  .card.best { border: 2.5px solid var(--ink); }
+  .card .gl { font-size: 44px; font-weight: 900; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="crumb"><a href="index.html">와이어프레임 목록</a> / S-06</div>
+    <h1>S-06. 기록 목록</h1>
+    <p class="lead">관련 기능 F-23 · 기준: <a href="../../docs/SCREENS.md">SCREENS.md</a> 3장 S-06 · 프레임 1280×760. 예시는 7판 (S-02 메인의 "최근 기록"과 같은 데이터). 행이나 카드를 누르면 그 판의 S-05 결과(지난 기록 보기)로 간다.</p>
+  </header>
+
+  <!-- ================= 시안 A ================= -->
+  <h2>시안 A. 표 (기획서 기준)</h2>
+  <p class="intent"><b>의도:</b> 날짜·수익률·등급·중도 종료를 한 줄씩. 비교하고 정렬하기에 가장 좋다.</p>
+  <div class="scroll">
+    <span class="frame-label">A · 최신순</span>
+    <div class="frame">
+      <div class="page-head"><span class="btn sm ghost">← 메인</span><span class="title">기록</span><span class="muted small">7판</span><span class="grow"></span>
+        <span class="small muted">정렬</span><span class="seg"><span class="btn sm on">최신순</span><span class="btn sm">수익률순</span></span></div>
+      <div class="grow" style="padding:16px 120px;overflow:hidden">
+        <table class="rec" id="a-table"></table>
+      </div>
+    </div>
+  </div>
+  <ul class="notes"><li><span class="pin">★</span>최고 기록 행은 회색 채움과 ★로 강조. 정렬을 바꿔도 강조는 유지된다.</li></ul>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>기획서 그대로, 만들기 쉬움</li><li>기록이 많아져도 스크롤만 늘어남</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>밋밋함. 등급이 눈에 덜 띔</li></ul></div>
+  </div>
+
+  <!-- ================= 시안 B ================= -->
+  <h2>시안 B. 등급 카드 격자</h2>
+  <p class="intent"><b>의도:</b> 판마다 등급을 크게 쓴 카드. 모은 등급을 "수집"하는 느낌을 준다.</p>
+  <div class="scroll">
+    <span class="frame-label">B · 최신순</span>
+    <div class="frame">
+      <div class="page-head"><span class="btn sm ghost">← 메인</span><span class="title">기록</span><span class="muted small">7판</span><span class="grow"></span>
+        <span class="small muted">정렬</span><span class="seg"><span class="btn sm on">최신순</span><span class="btn sm">수익률순</span></span></div>
+      <div class="grow" style="padding:24px;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:14px;align-content:start" id="b-grid"></div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>등급이 한눈에 들어오고 재미있음</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>한 화면에 8판 정도만 보여 비교가 어려움</li><li>정렬해도 순서가 표보다 덜 읽힘</li></ul></div>
+  </div>
+
+  <!-- ================= 시안 C ================= -->
+  <h2>시안 C. 요약 + 수익률 막대 + 표 — ✔ 선택</h2>
+  <p class="intent"><b>의도:</b> 위쪽에 전체 요약과 판별 수익률 막대를 두고, 아래에 표를 둔다. "점점 나아지고 있나"를 보여 준다.</p>
+  <div class="scroll">
+    <span class="frame-label">C · 최신순</span>
+    <div class="frame">
+      <div class="page-head"><span class="btn sm ghost">← 메인</span><span class="title">기록</span><span class="muted small">7판</span><span class="grow"></span>
+        <span class="small muted">정렬</span><span class="seg"><span class="btn sm on">최신순</span><span class="btn sm">수익률순</span></span></div>
+      <div class="col grow" style="padding:16px 24px;gap:12px">
+        <div style="display:grid;grid-template-columns:200px 200px 200px 1fr;gap:10px;height:170px">
+          <div class="box"><div class="small muted">최고 기록</div><div class="row" style="gap:10px;margin-top:10px"><span class="g" style="width:48px;height:48px;font-size:28px">S</span><b class="mono up" style="font-size:22px">▲31.0%</b></div><div class="small muted" style="margin-top:8px">11-15 22:30</div></div>
+          <div class="box"><div class="small muted">평균 수익률</div><div class="mono up" style="font-size:26px;font-weight:700;margin-top:10px">▲8.0%</div></div>
+          <div class="box"><div class="small muted">등급 분포</div><div class="col small mono" style="gap:3px;margin-top:8px"><span>S ■ 1</span><span>A ■ 1</span><span>B ■■ 2</span><span>C ■■ 2</span><span>D ■ 1</span></div></div>
+          <div class="box col"><div class="t"><span>판별 수익률 (오래된 순 →)</span></div><div class="grow" id="c-bars" style="display:flex;align-items:center;gap:10px;position:relative;border-top:1px dashed transparent"></div></div>
+        </div>
+        <div class="grow" style="overflow:hidden"><table class="rec" id="c-table"></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>실력이 느는지 흐름을 볼 수 있음</li><li>막대를 눌러도 해당 판으로 이동 가능</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>위쪽 요약 때문에 표에 보이는 행이 줄어듦</li><li>판 수가 많아지면 막대가 빽빽해짐 (최근 20판만 등)</li></ul></div>
+  </div>
+
+  <!-- ================= 공통 ================= -->
+  <h2>공통 · 상태와 예외</h2>
+  <div class="states">
+    <div class="state">
+      <div class="t">① 기록이 없을 때</div>
+      <div class="box" style="text-align:center;padding:24px">
+        <div class="b">아직 기록이 없습니다</div>
+        <div class="small muted" style="margin:4px 0 12px">한 판을 끝내면 여기에 쌓여요</div>
+        <span class="btn primary">게임 시작</span>
+      </div>
+    </div>
+    <div class="state">
+      <div class="t">② 저장 데이터 일부가 깨짐</div>
+      <span class="note">⚠ 기록 1개를 읽지 못해 건너뛰었습니다.</span>
+      <p class="small muted" style="margin:6px 0 0">표 위에 띠로 안내. 깨진 행은 보여 주지 않는다.</p>
+    </div>
+    <div class="state">
+      <div class="t">③ 수익률순 정렬</div>
+      <table class="list"><tbody>
+        <tr><td>11-15 22:30</td><td class="r mono up">▲31.0%</td><td class="r b">S ★</td></tr>
+        <tr><td>11-15 21:05</td><td class="r mono up">▲16.2%</td><td class="r">A</td></tr>
+        <tr><td>11-16 21:40</td><td class="r mono up">▲12.4%</td><td class="r">B</td></tr>
+        <tr><td class="muted">…</td><td></td><td></td></tr>
+      </tbody></table>
+      <p class="small muted" style="margin:6px 0 0">높은 순. 다시 누르면 낮은 순으로 바꿀지는 미정.</p>
+    </div>
+  </div>
+</div>
+<script>
+// [날짜, 시각, 수익률, 등급, 중도 종료 캔들(없으면 null)]
+const REC = [
+  ["11-16", "21:40", 12.4, "B", null],
+  ["11-16", "20:55", -7.8, "D", null],
+  ["11-15", "23:10", -4.1, "C", 212],
+  ["11-15", "22:30", 31.0, "S", null],
+  ["11-15", "21:05", 16.2, "A", null],
+  ["11-14", "19:20", 2.3, "C", null],
+  ["11-14", "18:40", 6.1, "B", null],
+];
+const BEST = 3;
+const head = `<thead><tr><th>날짜</th><th class="r">수익률</th><th>등급</th><th>종료</th><th class="r">최종 자산</th><th></th></tr></thead>`;
+const rows = REC.map(([d, t, p, g, q], i) => `<tr class="${i === BEST ? "best" : ""}">
+  <td>2026-${d} <span class="muted">${t}</span></td>
+  <td class="r mono">${wfPct(p)}</td>
+  <td><span class="g">${g}</span>${i === BEST ? " ★ 최고 기록" : ""}</td>
+  <td>${q ? `<span class="chip dark">중도 종료</span> <span class="small muted">${q}/600</span>` : '<span class="muted small">끝까지</span>'}</td>
+  <td class="r mono">${Math.round(10000000 * (1 + p / 100)).toLocaleString()}</td>
+  <td class="r muted">▸</td></tr>`).join("");
+document.getElementById("a-table").innerHTML = head + "<tbody>" + rows + "</tbody>";
+document.getElementById("c-table").innerHTML = head + "<tbody>" + rows + "</tbody>";
+
+document.getElementById("b-grid").innerHTML = REC.map(([d, t, p, g, q], i) => `
+  <div class="card ${i === BEST ? "best" : ""}">
+    <div class="row between"><span class="small muted">2026-${d} ${t}</span>${i === BEST ? '<span class="chip dark">★ 최고</span>' : q ? '<span class="chip">중도</span>' : ""}</div>
+    <div class="row between" style="align-items:flex-end"><span class="gl">${g}</span><b class="mono" style="font-size:20px">${wfPct(p)}</b></div>
+  </div>`).join("");
+
+const max = 32;
+document.getElementById("c-bars").innerHTML = '<div style="position:absolute;left:0;right:0;top:50%;border-top:1px solid #bbb"></div>' +
+  REC.slice().reverse().map(([d, t, p, g], i) => {
+    const h = Math.abs(p) / max * 50;
+    return `<div style="flex:1;height:100%;position:relative" title="${d}">
+      <div style="position:absolute;left:15%;right:15%;${p >= 0 ? `bottom:50%` : `top:50%`};height:${h}%;background:${p >= 0 ? "#888" : "#ccc"};${g === "S" ? "border:2px solid #222" : ""}"></div>
+      <span class="small mono" style="position:absolute;left:0;right:0;text-align:center;${p >= 0 ? `bottom:${50 + h}%` : `top:${50 + h}%`}">${g}</span></div>`;
+  }).join("");
+</script>
+</body>
+</html>

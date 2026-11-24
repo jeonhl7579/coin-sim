@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S-01 모바일 안내 — 와이어프레임</title>
+<link rel="stylesheet" href="wireframe.css">
+<script src="wireframe.js"></script>
+<style>
+  .phones { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .phone-wrap { display: flex; flex-direction: column; gap: 0; }
+  .phone {
+    width: 360px; height: 720px; border: 1.5px solid var(--ink); border-radius: 28px; background: var(--frame);
+    padding: 44px 24px 28px; position: relative; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .phone::before { content: ""; position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 90px; height: 16px; border-radius: 8px; background: var(--fill-dark); }
+  .logo-ph { width: 64px; height: 64px; border: 1.5px solid var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; }
+  .phone h3 { font-size: 20px; margin: 0; line-height: 1.35; }
+  .url { border: 1px dashed var(--line); padding: 8px 10px; font-size: 13px; background: var(--fill); font-family: ui-monospace, Menlo, monospace; }
+  .step { display: flex; gap: 10px; align-items: flex-start; }
+  .step b.n { flex: none; width: 24px; height: 24px; border: 1.5px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .mini { width: 240px; height: 380px; padding: 30px 14px 14px; border-radius: 20px; }
+  .mini::before { top: 8px; width: 60px; height: 10px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="crumb"><a href="index.html">와이어프레임 목록</a> / S-01</div>
+    <h1>S-01. 모바일 안내</h1>
+    <p class="lead">관련 기능 F-34 · 기준: <a href="../../docs/SCREENS.md">SCREENS.md</a> 3장 S-01 · 프레임 360×720 (휴대폰). 다른 화면으로 이동하지 않는 독립 화면이다.</p>
+  </header>
+
+  <h2>시안 3개 비교</h2>
+  <div class="scroll">
+  <div class="phones">
+    <!-- A -->
+    <div class="phone-wrap">
+      <span class="frame-label" style="align-self:flex-start">A · 가운데 안내 ✔ 선택</span>
+      <div class="phone" style="text-align:center;align-items:center;justify-content:center;gap:16px">
+        <div class="logo-ph">LOGO</div>
+        <div class="b" style="letter-spacing:.04em">COIN SIM</div>
+        <div class="small muted">가상 코인으로 해 보는 매매 시뮬레이션 게임</div>
+        <div style="height:12px"></div>
+        <h3>데스크톱에서<br>플레이해 주세요</h3>
+        <div class="small muted">차트와 주문 패널을 한 화면에 보여 줘야 해서<br>1280px 이상 화면이 필요해요.</div>
+        <div style="height:12px"></div>
+        <span class="btn primary lg block">주소 복사</span>
+        <div class="small muted">coinsim.example</div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="phone-wrap">
+      <span class="frame-label" style="align-self:flex-start">B · 게임 미리보기</span>
+      <div class="phone" style="gap:14px">
+        <div class="row" style="gap:8px"><div class="logo-ph" style="width:28px;height:28px;font-size:8px">LOGO</div><b>COIN SIM</b></div>
+        <div class="ph" style="height:220px;position:relative"><span>게임 화면 캡처<br>(시안 C 배치)</span></div>
+        <div class="small muted">가상 코인 10개, 600개 캔들, 그 사이 터지는 뉴스. 어떻게 대응할지 고르는 매매 게임.</div>
+        <span class="grow"></span>
+        <div class="box fill" style="text-align:center;padding:14px">
+          <div class="b" style="font-size:16px">데스크톱에서 플레이해 주세요</div>
+          <div class="small muted" style="margin-top:2px">PC 브라우저에서 아래 주소를 열면 바로 시작돼요</div>
+        </div>
+        <span class="btn primary lg block">주소 복사</span>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="phone-wrap">
+      <span class="frame-label" style="align-self:flex-start">C · 단계 안내</span>
+      <div class="phone" style="gap:18px">
+        <div class="row" style="gap:8px"><div class="logo-ph" style="width:28px;height:28px;font-size:8px">LOGO</div><b>COIN SIM</b></div>
+        <h3>이 게임은<br>데스크톱 전용이에요</h3>
+        <div class="small muted">가상 코인 시세 속에서 뉴스에 대응하는 매매 시뮬레이션 게임</div>
+        <div class="col" style="gap:14px;margin-top:8px">
+          <div class="step"><b class="n">1</b><div class="grow col" style="gap:6px"><span>주소를 복사하세요</span><div class="row"><div class="url grow">coinsim.example</div><span class="btn primary">복사</span></div></div></div>
+          <div class="step"><b class="n">2</b><div class="grow">메일, 메신저 등으로 PC에 보내세요</div></div>
+          <div class="step"><b class="n">3</b><div class="grow">PC 브라우저에서 열면 바로 시작돼요</div></div>
+        </div>
+        <span class="grow"></span>
+        <div class="small muted" style="text-align:center">화면 너비 1280px 이상 권장</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="pros-cons" style="grid-template-columns:1fr 1fr 1fr;max-width:1160px">
+    <div><strong>A · 가운데 안내</strong><ul><li>가장 단순하고 기획서 구성 그대로</li><li>왜 안 되는지(1280px)를 한 줄로 설명</li><li>게임이 어떤지 보여 주는 게 없음</li></ul></div>
+    <div><strong>B · 게임 미리보기</strong><ul><li>캡처로 "해 보고 싶다"를 끌어냄</li><li>캡처 이미지를 따로 만들어 관리해야 함</li><li>주소가 화면에 안 보임</li></ul></div>
+    <div><strong>C · 단계 안내</strong><ul><li>주소가 보이고, 복사 후 할 일까지 안내</li><li>글이 가장 많음</li></ul></div>
+  </div>
+
+  <h2>공통 · 상태와 예외</h2>
+  <div class="states">
+    <div class="state">
+      <div class="t">① 복사 완료</div>
+      <div class="phone mini" style="justify-content:flex-end;gap:8px">
+        <span class="btn primary block">주소 복사</span>
+        <div class="toast" style="position:static;text-align:center">✓ 주소를 복사했어요</div>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">버튼 아래에 2초 정도 표시 [임시값]</p>
+    </div>
+    <div class="state">
+      <div class="t">② 복사 실패 (클립보드 권한 없음)</div>
+      <div class="phone mini" style="justify-content:flex-end;gap:8px">
+        <div class="url" style="border:1.5px solid #222;background:#fff">coinsim.example</div>
+        <span class="note">복사하지 못했어요. 주소를 길게 눌러 직접 복사해 주세요.</span>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">주소 칸을 드러내고 전체 선택된 상태로 둔다</p>
+    </div>
+    <div class="state">
+      <div class="t">③ 기기 판정 [추측]</div>
+      <div class="col small">
+        <span>· 화면 너비와 기기 정보를 함께 본다 (기획서 예외 처리)</span>
+        <span>· 태블릿 가로(1280px 이상)는 게임을 허용할지 미정</span>
+        <span>· 판정이 틀렸을 때를 위해 화면 맨 아래에 작은 링크 <span class="chip">그래도 열기</span>를 둘지 결정 필요</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

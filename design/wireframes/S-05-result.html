@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S-05 결과 — 와이어프레임</title>
+<link rel="stylesheet" href="wireframe.css">
+<script src="wireframe.js"></script>
+<style>
+  .grade { border: 3px solid var(--ink); display: inline-flex; align-items: center; justify-content: center; font-weight: 900; line-height: 1; background: var(--frame); flex: none; }
+  .slot { border: 2px dashed #ccc !important; color: #bbb !important; background: transparent !important; box-shadow: none !important; }
+  .card { border: 1px solid var(--line); padding: 10px 12px; background: var(--frame); min-width: 0; }
+  .card.new { border: 2.5px solid var(--ink); }
+  .card .k { font-size: 11px; color: var(--ink-soft); }
+  .card .v { font-size: 22px; font-weight: 700; }
+  .card .s { font-size: 11px; color: var(--ink-soft); }
+  .card.slot { display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .scale { display: flex; gap: 4px; font-size: 11px; }
+  .scale span { flex: 1; text-align: center; border: 1px solid var(--line-soft); padding: 2px 0; color: #999; }
+  .scale span.on { border: 1.5px solid var(--ink); color: var(--ink); font-weight: 700; background: var(--fill); }
+  .graph { position: relative; border: 1px solid var(--line); background: var(--frame); min-height: 0; }
+  .graph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .graph .legend { position: absolute; left: 8px; top: 6px; font-size: 11px; color: var(--ink-soft); display: flex; gap: 12px; background: rgba(255,255,255,.85); padding: 0 4px; z-index: 2; }
+  .graph .now { position: absolute; top: 6px; right: 8px; font-size: 11px; background: var(--ink); color: #fff; padding: 1px 6px; z-index: 2; }
+  .graph .lab { position: absolute; font-size: 11px; font-weight: 700; background: rgba(255,255,255,.9); padding: 0 3px; z-index: 2; }
+  .hint { font-size: 12px; color: var(--ink-soft); border: 1px dashed var(--line); padding: 6px 12px; }
+
+  /* 장면 컷: 실제 1280×760 프레임을 줄여서 보여 준다 */
+  .board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .shot { display: flex; flex-direction: column; gap: 6px; }
+  .shot .thumb { width: 100%; aspect-ratio: 1280 / 760; position: relative; overflow: hidden; border: 1px solid var(--ink); background: #fff; }
+  .shot .thumb .frame { position: absolute; left: 0; top: 0; transform-origin: 0 0; border: none; }
+  .shot .cap { font-size: 12px; }
+  .shot .cap b { display: inline-block; background: var(--ink); color: #fff; padding: 0 6px; margin-right: 4px; font-size: 11px; }
+
+  .timeline { width: 100%; max-width: 1000px; border-collapse: collapse; background: var(--frame); font-size: 13px; }
+  .timeline th, .timeline td { border: 1px solid var(--line-soft); padding: 6px 10px; text-align: left; }
+  .timeline th { background: var(--fill); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="crumb"><a href="index.html">와이어프레임 목록</a> / S-05</div>
+    <h1>S-05. 결과</h1>
+    <p class="lead">관련 기능 F-20, F-31 · 기준: <a href="../../docs/SCREENS.md">SCREENS.md</a> 3장 S-05, 등급 기준은 <a href="../../docs/FEATURES.md">FEATURES.md</a> F-20 (S +30% · A +15% · B +5% · C −5% 이상 · D −5% 미만, [테스트 후 결정]) · 프레임 1280×760</p>
+    <p class="lead" style="margin-top:6px"><b>2차 시안 (2026-11-17):</b> 1차에서 고른 시안 A(등급 중심 단일 열)를 바탕으로, "그래프 재생 → 카드 → 마지막에 등급" 연출 순서에 맞춰 다시 만들었다. 등급 칸은 150px → 약 90px로 줄였다.</p>
+    <p class="lead" style="margin-top:6px">예시 판: 시작 10,000,000 → 최종 11,240,000 (▲12.4%, <b>B</b>) · 최대 낙폭 ▼8.7% · 처음 산 코인을 끝까지 들고 있었다면 ▲4.2% · 매매 14회</p>
+  </header>
+
+  <!-- ================= 공통 연출 순서 ================= -->
+  <h2>공통 · 연출 순서</h2>
+  <table class="timeline">
+    <thead><tr><th>순서</th><th>나타나는 것</th><th>시간 [임시값]</th><th>메모</th></tr></thead>
+    <tbody>
+      <tr><td>①</td><td>매매 그래프 재생 — 총자산 선이 첫 캔들부터 마지막 캔들까지 그려진다. 매수 ▲ / 매도 ▼ 지점이 선을 따라 찍힌다</td><td>약 3초</td><td>재생 중에는 금액 숫자를 숨긴다 (결과를 미리 알 수 없게). 오른쪽 위에 게임 시각만 표시</td></tr>
+      <tr><td>②</td><td>최대 낙폭 카드 + 그래프의 낙폭 구간이 칠해짐</td><td>0.4초 뒤</td><td rowspan="3">카드는 하나씩, 방금 나타난 카드는 굵은 테두리</td></tr>
+      <tr><td>③</td><td>"끝까지 들고 있었다면" 카드 + 그래프에 점선이 그려짐</td><td>0.4초 뒤</td></tr>
+      <tr><td>④</td><td>매매 카드 (횟수, 이벤트 대응, 가장 많이 번·잃은 코인)</td><td>0.4초 뒤</td></tr>
+      <tr><td>⑤</td><td>최종 수익률이 0%부터 올라가고, 등급 도장이 찍힌다. 그래프 양 끝에 금액이 나타나고 버튼이 켜진다</td><td>약 0.8초</td><td>전체 약 5초</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="max-width:1000px">화면 어디든 누르면 ⑤까지 바로 건너뛴다. 지난 기록을 볼 때(S-06에서 들어옴)는 연출 없이 ⑤ 상태로 바로 보여 준다.</p>
+
+  <!-- ================= A-1 ================= -->
+  <h2>시안 A-1. 1차 A 배치 그대로 · 위 칸이 마지막에 채워짐</h2>
+  <p class="intent"><b>의도:</b> 1차 시안 A 배치를 유지한다. 등급·수익률 자리(맨 위)를 "?"로 비워 두고, 아래(그래프 → 카드)부터 채운 뒤 마지막에 위를 채운다. 결과 화면의 최종 모습은 1차 A와 거의 같다.</p>
+  <div class="board" data-variant="a1"></div>
+  <div class="scroll"><span class="frame-label">A-1 · ⑤ 최종</span><div class="js-result" data-variant="a1" data-stage="4"></div></div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>최종 화면에서 결과(등급)가 가장 먼저 눈에 들어옴</li><li>비어 있는 "?" 칸이 끝까지 기대감을 줌</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>연출은 아래 → 위로 진행돼 시선이 거꾸로 움직임</li><li>그래프가 아래쪽이라 높이가 낮음</li></ul></div>
+  </div>
+
+  <!-- ================= A-2 ================= -->
+  <h2>시안 A-2. 그래프가 주인공 · 끝점에 등급 도장 — ✔ 선택</h2>
+  <p class="intent"><b>의도:</b> 재생되는 그래프를 화면 대부분에 크게 둔다. 카드는 그래프 아래에 하나씩 놓이고, 마지막에 등급과 수익률이 그래프 끝점 옆에 도장처럼 찍힌다. "한 판을 다시 보는" 느낌이 가장 강하다.</p>
+  <div class="board" data-variant="a2"></div>
+  <div class="scroll"><span class="frame-label">A-2 · ⑤ 최종</span><div class="js-result" data-variant="a2" data-stage="4"></div></div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>그래프가 크고, 재생 연출이 가장 잘 보임</li><li>등급이 "이 선의 결말"로 읽힘</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>최종 화면에서 등급이 오른쪽 위에 있어 처음 시선과 어긋날 수 있음</li><li>선 끝 위치가 판마다 달라 도장 위치 규칙이 필요 (지금은 오른쪽 위 고정)</li></ul></div>
+  </div>
+
+  <!-- ================= A-3 ================= -->
+  <h2>시안 A-3. 위에서 아래로 읽는 이야기형</h2>
+  <p class="intent"><b>의도:</b> 나타나는 순서 = 읽는 순서. 맨 위 그래프 → 가운데 카드 → 아래 결론(등급·수익률) → 버튼. 결론이 버튼 바로 위라 "다시 하기"로 자연스럽게 이어진다.</p>
+  <div class="board" data-variant="a3"></div>
+  <div class="scroll"><span class="frame-label">A-3 · ⑤ 최종</span><div class="js-result" data-variant="a3" data-stage="4"></div></div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>연출 방향과 시선 방향이 같아 가장 자연스러움</li><li>결론 → 버튼이 붙어 있어 다음 행동이 빠름</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>최종 화면에서 등급이 아래쪽이라 "결과 화면"의 첫인상은 약함</li></ul></div>
+  </div>
+
+  <!-- ================= 공통 상태 ================= -->
+  <h2>공통 · 상태와 예외</h2>
+  <div class="states">
+    <div class="state">
+      <div class="t">중도 종료</div>
+      <div class="row" style="gap:8px"><span class="chip dark">중도 종료</span><span class="small">75 / 600 캔들에서 종료</span></div>
+      <p class="small muted" style="margin:6px 0 0">그래프는 종료 시점까지만 재생하고 오른쪽은 빈칸. "끝까지 들고 있었다면"도 종료 시점까지로 계산. 칩은 ⑤에서 등급 옆에 붙는다.</p>
+    </div>
+    <div class="state">
+      <div class="t">매매를 한 번도 안 함</div>
+      <div class="card small" style="text-align:center">매매 없음 — 현금 10,000,000 그대로<br><span class="muted">수익률 0.0% · 등급 C</span></div>
+      <p class="small muted" style="margin:6px 0 0">재생(①~④)을 생략하고 ⑤만 보여 준다. 그래프·카드 자리는 이 문구로 대체.</p>
+    </div>
+    <div class="state">
+      <div class="t">기록 저장 실패</div>
+      <span class="note">⚠ 이번 결과를 저장하지 못했어요. 기록 목록에 나타나지 않습니다.</span>
+      <p class="small muted" style="margin:6px 0 0">⑤가 끝난 뒤 위쪽 띠로 안내. 연출을 방해하지 않게.</p>
+    </div>
+    <div class="state">
+      <div class="t">지난 기록 보기 (S-06에서 들어옴)</div>
+      <div class="row" style="gap:8px"><span class="chip">2026-11-15 22:30 기록</span><span class="btn primary">목록으로</span><span class="btn">메인</span></div>
+      <p class="small muted" style="margin:6px 0 0">연출 없이 ⑤ 상태로 바로. [다시 하기] 대신 [목록으로].</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- 데이터 ---------- */
+const N = 120;
+const SERIES = (() => {
+  const rnd = wfRand(5);
+  let a = 150, b = 150, pa = [], pb = [];
+  for (let i = 0; i < N; i++) {
+    a += (rnd() - 0.45) * 9; b += (rnd() - 0.48) * 7;
+    if (i > 50 && i < 64) a -= 4;                 // 최대 낙폭 구간
+    pa.push(a); pb.push(b);
+  }
+  // 끝값을 결과 숫자에 맞춤: 시작 150 = 10,000,000 → 내 총자산 ▲12.4%, 끝까지 보유 ▲4.2%
+  const fix = (arr, t) => { const d = t - arr[N - 1]; return arr.map((v, i) => v + d * i / (N - 1)); };
+  return { pa: fix(pa, 150 * 1.124), pb: fix(pb, 150 * 1.042) };
+})();
+const BUYS = [6, 28, 60, 72, 88, 96, 104, 112], SELLS = [20, 44, 50, 82, 100, 116];  // 매수 8, 매도 6
+const DD = [51, 64];
+
+/* ---------- 그래프 ---------- */
+function graphSvg(frac, showDD, showHold) {
+  const { pa, pb } = SERIES, W = 1000, H = 300;
+  const all = pa.concat(pb), mx = Math.max(...all), mn = Math.min(...all);
+  const y = v => 30 + (mx - v) / (mx - mn) * (H - 60);
+  const x = i => i / (N - 1) * W;
+  const m = Math.max(2, Math.round(frac * (N - 1)) + 1);
+  const path = (arr, k) => arr.slice(0, k).map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  let s = `<line x1="0" x2="${W}" y1="${y(150)}" y2="${y(150)}" stroke="#ddd" stroke-dasharray="2 4"/>`;
+  if (showDD) s += `<rect x="${x(DD[0])}" y="0" width="${x(DD[1]) - x(DD[0])}" height="${H}" fill="#ececec"/>`;
+  if (showHold) s += `<path d="${path(pb, N)}" fill="none" stroke="#aaa" stroke-width="2" stroke-dasharray="6 5"/>`;
+  s += `<path d="${path(pa, m)}" fill="none" stroke="#222" stroke-width="2.5"/>`;
+  BUYS.filter(i => i < m).forEach(i => { const cx = x(i), cy = y(pa[i]) + 14; s += `<path d="M${cx - 6},${cy + 6}L${cx + 6},${cy + 6}L${cx},${cy - 4}Z" fill="#222"/>`; });
+  SELLS.filter(i => i < m).forEach(i => { const cx = x(i), cy = y(pa[i]) - 14; s += `<path d="M${cx - 6},${cy - 6}L${cx + 6},${cy - 6}L${cx},${cy + 4}Z" fill="#fff" stroke="#222" stroke-width="1.5"/>`; });
+  if (m < N) { const px = x(m - 1); s += `<line x1="${px}" x2="${px}" y1="0" y2="${H}" stroke="#222" stroke-width="1" stroke-dasharray="3 3"/><circle cx="${px}" cy="${y(pa[m - 1])}" r="5" fill="#222"/>`; }
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${s}</svg>`, endY: (y(pa[N - 1]) / H * 100).toFixed(1), startY: (y(150) / H * 100).toFixed(1) };
+}
+function graph(st, style = "", noLabs = false) {
+  const frac = st === 0 ? 0.62 : 1;
+  const g = graphSvg(frac, st >= 1, st >= 2);
+  const legend = `<div class="legend"><span>━ 내 총자산</span><span>▲ 매수 ▽ 매도</span>${st >= 2 ? "<span>┅ 끝까지 보유</span>" : ""}${st >= 1 ? "<span>▒ 최대 낙폭</span>" : ""}</div>`;
+  const now = st === 0 ? `<div class="now">▶ 재생 중 · D+5 03:00</div>` : "";
+  const labs = st >= 4 && !noLabs ? `<span class="lab" style="left:4px;top:calc(${g.startY}% + 4px)">10,000,000</span><span class="lab up" style="right:4px;top:calc(${g.endY}% - 20px)">11,240,000</span>` : "";
+  return `<div class="graph" style="${style}">${g.svg}${legend}${now}${labs}</div>`;
+}
+
+/* ---------- 카드 · 등급 ---------- */
+const CARDS = [
+  { st: 1, html: `<div class="k">최대 낙폭</div><div class="v mono down">▼8.7%</div><div class="s">D+2 21:00 → D+3 06:00</div>` },
+  { st: 2, html: `<div class="k">끝까지 들고 있었다면</div><div class="v mono up">▲4.2%</div><div class="s">내 매매가 <b style="color:#222">+8.2%p</b> 더 나았어요</div>` },
+  { st: 3, html: `<div class="k">매매</div><div class="v mono">14회 <span class="small muted" style="font-weight:400">매수 8 · 매도 6</span></div><div class="s">이벤트 대응 5회 · 최고 GLM <span class="up">+842,000</span> · 최저 JLT <span class="down">−336,000</span></div>` },
+];
+function cards(st, style = "") {
+  return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;${style}">` + CARDS.map(c =>
+    st >= c.st ? `<div class="card ${st === c.st ? "new" : ""}">${c.html}</div>` : `<div class="card slot">·  ·  ·</div>`).join("") + `</div>`;
+}
+function grade(st, size, extra = "") {
+  return st >= 4
+    ? `<div class="grade" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .64)}px;${extra}">B</div>`
+    : `<div class="grade slot" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .45)}px">?</div>`;
+}
+function ret(st, big = 40, align = "left") {
+  if (st < 4) return `<div class="col" style="gap:4px;align-items:${align === "center" ? "center" : "flex-start"}"><div class="small muted">최종 수익률</div><div class="slot" style="width:${big * 6}px;height:${big + 6}px;display:flex;align-items:center;justify-content:center;font-size:13px">결과 집계 중…</div></div>`;
+  return `<div class="col" style="gap:4px;align-items:${align === "center" ? "center" : "flex-start"}">
+    <div class="small muted">최종 수익률</div>
+    <div class="mono up" style="font-size:${big}px;font-weight:800;line-height:1">▲12.4%</div>
+    <div class="mono small">최종 자산 <b>11,240,000</b> <span class="muted">/ 시작 10,000,000</span></div>
+    <div class="scale" style="width:240px;margin-top:4px"><span>D</span><span>C</span><span class="on">B</span><span>A</span><span>S</span></div></div>`;
+}
+function actions(st) {
+  return st >= 4
+    ? `<div class="row center" style="gap:8px"><span class="btn primary lg" style="width:220px">다시 하기</span><span class="btn lg" style="width:140px">기록 보기</span><span class="btn lg" style="width:140px">메인</span></div>`
+    : `<div class="row center"><span class="hint">화면을 누르면 건너뛰기 ▸▸</span></div>`;
+}
+
+/* ---------- 시안별 배치 ---------- */
+const LAYOUT = {
+  a1: st => `<div class="frame" style="padding:24px 72px 20px;gap:14px">
+      <div class="row center" style="gap:24px;flex:none;height:110px">${grade(st, 92)}${ret(st, 40)}</div>
+      ${cards(st, "flex:none;height:92px")}
+      ${graph(st, "flex:1")}
+      <div style="flex:none">${actions(st)}</div>
+    </div>`,
+  a2: st => `<div class="frame" style="padding:18px 28px 18px;gap:12px">
+      <div class="row between" style="flex:none"><b style="font-size:16px">이번 판 돌아보기</b><span class="small muted">600 캔들 · 시드 #4821</span></div>
+      <div style="flex:1;position:relative;min-height:0;display:flex">
+        ${graph(st, "flex:1", true)}
+        ${st >= 4 ? `<div class="modal row" style="right:20px;top:34px;gap:16px;padding:14px 18px;transform:rotate(-2deg)">${grade(st, 88)}${ret(st, 34)}</div>` : ""}
+      </div>
+      ${cards(st, "flex:none;height:92px")}
+      <div style="flex:none">${actions(st)}</div>
+    </div>`,
+  a3: st => `<div class="frame" style="padding:20px 72px 20px;gap:12px">
+      ${graph(st, "flex:none;height:280px")}
+      ${cards(st, "flex:none;height:92px")}
+      <div class="row center" style="flex:1;gap:28px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)">${grade(st, 96)}${ret(st, 42)}</div>
+      <div style="flex:none">${actions(st)}</div>
+    </div>`,
+};
+
+/* ---------- 그리기 ---------- */
+document.querySelectorAll(".js-result").forEach(el => {
+  el.outerHTML = LAYOUT[el.dataset.variant](+el.dataset.stage);
+});
+const CAPS = ["① 그래프 재생 중 (금액 숨김)", "② 최대 낙폭", "③ 끝까지 들고 있었다면", "④ 매매"];
+document.querySelectorAll(".board").forEach(board => {
+  board.innerHTML = CAPS.map((c, st) => `<div class="shot"><div class="thumb">${LAYOUT[board.dataset.variant](st)}</div><div class="cap"><b>${st + 1}</b>${c.slice(2)}</div></div>`).join("");
+});
+// 장면 컷 축소 비율을 칸 너비에 맞춤
+function fitThumbs() {
+  document.querySelectorAll(".thumb").forEach(t => { t.firstElementChild.style.transform = `scale(${t.clientWidth / 1280})`; });
+}
+fitThumbs(); addEventListener("resize", fitThumbs);
+</script>
+</body>
+</html>

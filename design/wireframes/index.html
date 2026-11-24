@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coin Sim 와이어프레임</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .screens { width: 100%; max-width: 1000px; border-collapse: collapse; margin-top: 12px; background: var(--frame); }
+  .screens th, .screens td { border: 1px solid var(--line-soft); padding: 8px 10px; text-align: left; font-size: 13px; vertical-align: top; }
+  .screens th { background: var(--fill); font-size: 12px; }
+  .screens .todo { color: #aaa; }
+  .flow { display: grid; grid-template-columns: repeat(5, max-content); gap: 10px 12px; align-items: center; margin-top: 12px; font-size: 12px; }
+  .flow .n { border: 1.5px solid var(--ink); background: var(--frame); padding: 6px 10px; }
+  .flow .n.dash { border-style: dashed; }
+  .flow .a { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <h1>Coin Sim — 로우파이 와이어프레임</h1>
+    <p class="lead">기준 문서: <a href="../../docs/SCREENS.md">docs/SCREENS.md</a> (기획 5단계). 화면마다 시안 2~3개. 회색조로 배치와 정보 구조만 비교하며, 색과 글꼴은 정하지 않는다. 상승·하락만 ▲▼와 옅은 빨강·파랑으로 표시한다.</p>
+  </header>
+
+  <h2>화면 목록</h2>
+  <table class="screens">
+    <thead><tr><th>ID</th><th>화면</th><th>시안</th><th>상태</th></tr></thead>
+    <tbody>
+      <tr><td>S-01</td><td><a href="S-01-mobile.html">모바일 안내</a></td><td><b>A 가운데 안내 ✔ 선택</b> · B 게임 미리보기 · C 단계 안내</td><td>완료</td></tr>
+      <tr><td>S-02</td><td><a href="S-02-main.html">메인</a></td><td><b>A 단일 열 ✔ 선택</b> · B 버튼+기록 카드 · C 히어로+요약 띠</td><td>완료</td></tr>
+      <tr><td>S-03</td><td><a href="S-03-loading.html">로딩</a></td><td>A 단계+코인 목록 · B 게임 골격 채우기 · <b>C 카드 격자 ✔ 선택</b></td><td>완료</td></tr>
+      <tr><td>S-04</td><td><a href="S-04-game.html">게임</a></td><td>A 3단형 · B 차트 우선 · <b>C 가로 티커 ✔ 선택</b></td><td>완료 (+상태 8종)</td></tr>
+      <tr><td>S-04a</td><td><a href="S-04a-event.html">이벤트 모달</a></td><td>A 가운데 모달 · <b>B 사이드 시트 ✔ 선택</b> · C 차트 위 카드</td><td>완료 (+접은 상태, 상태 7종)</td></tr>
+      <tr><td>S-04b</td><td><a href="S-04b-quit.html">그만두기 확인 창</a></td><td><b>A 작은 확인 창 ✔ 선택</b> · B 결과 미리보기 · C 팝오버</td><td>완료</td></tr>
+      <tr><td>S-05</td><td><a href="S-05-result.html">결과</a></td><td>2차: A-1 위 칸 마지막 · <b>A-2 그래프 주인공 ✔ 선택</b> · A-3 이야기형 <span class="muted">(1차 A 기반)</span></td><td>2차 시안 완료 (+연출 순서, 상태 4종)</td></tr>
+      <tr><td>S-06</td><td><a href="S-06-records.html">기록 목록</a></td><td>A 표 · B 등급 카드 · <b>C 요약+막대+표 ✔ 선택</b></td><td>완료</td></tr>
+      <tr><td>S-07</td><td class="todo"><s>현실감 검증</s> (<a href="S-07-validation.html">참고용 시안</a>)</td><td colspan="2" class="todo">제외 — 개발용 검증 리포트로 전환 (FEATURES F-32, 2026-11-17)</td></tr>
+      <tr><td>S-08</td><td>도움말</td><td colspan="2" class="todo">MVP 이후 — 이번 범위에서 제외</td></tr>
+    </tbody>
+  </table>
+
+  <h2>화면 이동</h2>
+  <div class="flow">
+    <span class="n">S-02 메인</span><span class="a">─ 게임 시작 →</span><span class="n">S-03 로딩</span><span class="a">→</span><span class="n">S-04 게임</span>
+    <span></span><span></span><span></span><span class="a">이벤트 ↕</span><span class="n dash">S-04a 이벤트 모달</span>
+    <span></span><span></span><span></span><span class="a">그만두기 ↕</span><span class="n dash">S-04b 확인 창</span>
+    <span></span><span></span><span></span><span class="a">마지막 캔들 →</span><span class="n">S-05 결과</span>
+    <span class="n">S-02 메인</span><span class="a">─ 기록 보기 →</span><span class="n">S-06 기록 목록</span><span class="a">→</span><span class="n">S-05 (지난 기록)</span>
+      </div>
+  <p class="small muted" style="margin-top:12px">S-05 → [다시 하기] S-03 · [메인] S-02 · [기록 보기] S-06 &nbsp;|&nbsp; S-01 모바일 안내는 독립 화면</p>
+
+  <h2>보는 법</h2>
+  <ul class="small" style="max-width:820px">
+    <li>프레임은 1280×760 (최소 지원 너비). 창이 좁으면 프레임 안에서 가로 스크롤.</li>
+    <li>노란 번호 핀은 프레임 아래 메모와 짝을 이룬다.</li>
+    <li>진한 회색 버튼 = 주 동작(나중에 골드 강조색 자리), 점선 버튼 = 비활성.</li>
+    <li>X자 박스 = 이미지·그래프 자리표시. 캔들은 모양만 흉내 낸 가짜 데이터.</li>
+  </ul>
+</div>
+</body>
+</html>

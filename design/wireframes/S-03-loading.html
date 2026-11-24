@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S-03 로딩 — 와이어프레임</title>
+<link rel="stylesheet" href="wireframe.css">
+<script src="wireframe.js"></script>
+<style>
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .steps .s { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .steps .s i { font-style: normal; width: 20px; height: 20px; border: 1.5px solid var(--ink); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex: none; }
+  .steps .s.done i { background: var(--ink); color: #fff; }
+  .steps .s.now { font-weight: 700; }
+  .steps .s.todo { color: #aaa; } .steps .s.todo i { border-color: #bbb; }
+  .hsteps { display: flex; gap: 0; }
+  .hsteps > span { flex: 1; text-align: center; font-size: 12px; padding: 6px 0; border-bottom: 3px solid var(--line-soft); color: #aaa; }
+  .hsteps > span.done { border-color: var(--ink); color: var(--ink); }
+  .hsteps > span.now { border-color: var(--ink); color: var(--ink); font-weight: 700; border-bottom-style: dashed; }
+  .tip { font-size: 12px; color: var(--ink-soft); border-left: 3px solid var(--line); padding: 4px 10px; text-align: left; }
+  .coin-card { border: 1px solid var(--line); padding: 6px 8px; font-size: 12px; background: var(--frame); }
+  .coin-card.empty { border-style: dashed; color: #bbb; background: transparent; }
+  .coin-card.new { border: 2px solid #222; }
+  .skel { background: var(--fill); border: 1px dashed var(--line-soft); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="crumb"><a href="index.html">와이어프레임 목록</a> / S-03</div>
+    <h1>S-03. 로딩</h1>
+    <p class="lead">관련 기능 F-04~11 · 기준: <a href="../../docs/SCREENS.md">SCREENS.md</a> 3장 S-03 · 프레임 1280×760. 진행 단계는 통계 불러오기 → 코인 생성 → 시세 생성 → 이벤트 준비. 모든 시안은 <b>"코인 생성" 단계 중간(10개 중 6개 생성)</b> 순간을 그렸다.</p>
+  </header>
+
+  <!-- ================= 시안 A ================= -->
+  <h2>시안 A. 가운데 단계 목록 + 코인 이름 목록</h2>
+  <p class="intent"><b>의도:</b> 왼쪽에는 지금 몇 단계인지, 오른쪽에는 생성되는 코인 이름이 한 줄씩 추가된다. 기다리는 동안 "이번 판에 어떤 코인이 나오는지"를 미리 읽게 한다.</p>
+  <div class="scroll">
+    <span class="frame-label">A</span>
+    <div class="frame" style="align-items:center;justify-content:center">
+      <div class="row" style="gap:48px;align-items:flex-start">
+        <div class="col" style="width:300px;gap:16px">
+          <div style="font-size:20px;font-weight:700">새 시장을 만드는 중</div>
+          <div class="steps">
+            <div class="s done"><i>✓</i>통계 불러오기</div>
+            <div class="s now"><i>2</i>코인 생성 <span class="muted small mono" style="font-weight:400">6 / 10</span></div>
+            <div class="s todo"><i>3</i>시세 생성</div>
+            <div class="s todo"><i>4</i>이벤트 준비</div>
+          </div>
+          <div class="progress"><i style="width:40%"></i></div>
+        </div>
+        <div class="box" style="width:380px;min-height:330px">
+          <div class="t"><span>이번 판의 코인</span><span class="mono">6 / 10</span></div>
+          <table class="list">
+            <tbody>
+              <tr><td><b>ARK</b> Arkon</td><td class="r"><span class="chip">대장</span></td></tr>
+              <tr><td><b>BXA</b> Bexa</td><td class="r"><span class="chip">대형</span></td></tr>
+              <tr><td><b>CRL</b> Coralis</td><td class="r"><span class="chip">중형</span></td></tr>
+              <tr><td><b>DNM</b> Dunemint</td><td class="r"><span class="chip">중형</span></td></tr>
+              <tr><td><b>ELV</b> Elvy</td><td class="r"><span class="chip">소형</span></td></tr>
+              <tr class="sel"><td><b>FYR</b> Fyrr <span class="small muted">← 방금 생성</span></td><td class="r"><span class="chip">소형</span></td></tr>
+              <tr><td class="muted">· · ·</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tip" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);width:640px">💡 팁: 대장 코인이 크게 움직이면 다른 코인도 따라 움직이는 경우가 많아요.</div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>단계와 코인 등장이 한눈에 분리돼 읽기 쉬움</li><li>코인 성격(대장~밈)을 미리 알려 줌</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>로딩이 짧으면(1~2초) 다 읽기 전에 넘어감</li><li>게임 화면과 모양이 달라 전환이 뚝 끊김</li></ul></div>
+  </div>
+
+  <!-- ================= 시안 B ================= -->
+  <h2>시안 B. 게임 화면 골격 위에서 채워짐</h2>
+  <p class="intent"><b>의도:</b> 선택한 게임 화면(S-04 시안 C)의 골격을 먼저 그리고, 코인 카드가 하나씩 채워진다. 로딩이 끝나면 그 자리에서 바로 <b>준비 상태</b>로 넘어가 화면 전환이 없다.</p>
+  <div class="scroll">
+    <span class="frame-label">B</span>
+    <div class="frame">
+      <div class="topbar">
+        <span class="logo">COIN SIM</span><span class="sep"></span>
+        <div class="skel" style="width:300px;height:22px"></div><span class="sep"></span>
+        <div class="skel" style="width:140px;height:22px"></div>
+        <span class="grow"></span>
+        <div class="skel" style="width:140px;height:30px"></div>
+      </div>
+      <div class="row" style="padding:8px 8px 0;gap:6px;flex:none" id="b-strip"></div>
+      <div class="grow" style="display:grid;grid-template-columns:1fr 300px;grid-template-rows:1fr 200px;gap:8px;padding:8px;position:relative">
+        <div class="skel"></div><div class="skel"></div>
+        <div class="skel" style="grid-column:1/3"></div>
+        <div class="modal" style="left:50%;top:44%;transform:translate(-50%,-50%);width:440px">
+          <div class="b" style="font-size:16px;margin-bottom:10px">새 시장을 만드는 중</div>
+          <div class="hsteps"><span class="done">통계</span><span class="now">코인 6/10</span><span>시세</span><span>이벤트</span></div>
+          <div class="small" style="margin-top:12px"><b>FYR</b> Fyrr <span class="chip">소형</span> 생성됨</div>
+          <div class="tip" style="margin-top:14px">💡 팁: 대장 코인이 크게 움직이면 다른 코인도 따라 움직이는 경우가 많아요.</div>
+        </div>
+        <span class="pin" style="left:16px;top:14px">1</span>
+      </div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><span class="pin">1</span>코인 카드가 생길 때마다 왼쪽부터 채워진다. 방금 생긴 카드는 굵은 테두리. "시세 생성" 단계에서 차트 자리가, "이벤트 준비" 단계에서 뉴스 자리가 채워지는 식으로 단계와 영역을 짝지을 수 있다.</li>
+  </ul>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>로딩 → 게임 전환이 자연스러움</li><li>게임 화면 배치를 미리 익히게 됨</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>로딩 화면을 게임 화면 구현에 묶어야 함 (만드는 순서 영향)</li><li>오류 화면은 따로 필요</li></ul></div>
+  </div>
+
+  <!-- ================= 시안 C ================= -->
+  <h2>시안 C. 큰 진행 막대 + 코인 카드 격자 — ✔ 선택</h2>
+  <p class="intent"><b>의도:</b> 코인 10개를 5×2 카드로 크게 보여 주는 "출전 명단" 느낌의 연출. 카드가 뒤집히듯 하나씩 공개된다.</p>
+  <div class="scroll">
+    <span class="frame-label">C</span>
+    <div class="frame" style="align-items:center;justify-content:center;gap:22px">
+      <div style="font-size:22px;font-weight:700">이번 판의 코인을 뽑는 중</div>
+      <div style="width:820px">
+        <div class="hsteps"><span class="done">① 통계 불러오기</span><span class="now">② 코인 생성</span><span>③ 시세 생성</span><span>④ 이벤트 준비</span></div>
+      </div>
+      <div id="c-grid" style="display:grid;grid-template-columns:repeat(5,150px);gap:12px"></div>
+      <div class="tip" style="width:820px">💡 팁: 밈 코인은 하루에 수십 % 움직일 수 있어요. 한 코인에 몰빵하면 위험해요.</div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div><strong>좋은 점</strong><ul><li>게임 연출이 가장 강함 (기대감)</li><li>코인 성격을 카드로 기억하기 쉬움</li></ul></div>
+    <div><strong>걱정되는 점</strong><ul><li>연출을 보여 주려면 로딩을 일부러 늘려야 할 수 있음</li><li>기획서의 "심플한 금융 느낌"과 거리가 있음</li></ul></div>
+  </div>
+
+  <!-- ================= 공통 ================= -->
+  <h2>공통 · 상태와 예외</h2>
+  <div class="states">
+    <div class="state">
+      <div class="t">① 불러오기 실패</div>
+      <div class="box" style="text-align:center;padding:16px">
+        <div class="b">⚠ 통계 데이터를 불러오지 못했어요</div>
+        <div class="small muted" style="margin:4px 0 12px">네트워크 상태를 확인하고 다시 시도해 주세요</div>
+        <div class="row center" style="gap:8px"><span class="btn primary">다시 시도</span><span class="btn">메인으로</span></div>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">실패한 단계에 ✕ 표시를 남겨 어디서 멈췄는지 보여 준다.</p>
+    </div>
+    <div class="state">
+      <div class="t">② 생성 결과가 비정상 → 자동 재생성</div>
+      <div class="steps">
+        <div class="s done"><i>✓</i>통계 불러오기</div>
+        <div class="s done"><i>✓</i>코인 생성</div>
+        <div class="s now"><i>↻</i>시세 다시 생성 중 <span class="small muted" style="font-weight:400">(다른 시드)</span></div>
+      </div>
+      <p class="small muted" style="margin:6px 0 0">사용자가 할 일은 없다. 문구만 바뀌고 계속 진행.</p>
+    </div>
+    <div class="state">
+      <div class="t">③ 완료 → S-04 준비 상태</div>
+      <div class="box fill row between small" style="border:1.5px solid #222"><span><b>준비 중</b> — 과거 차트를 보고 첫 매수 후 [재생]</span><span class="btn sm primary">▶ 재생</span></div>
+      <p class="small muted" style="margin:6px 0 0">시안 B는 같은 화면에서 이어지고, A·C는 화면이 바뀐다.</p>
+    </div>
+  </div>
+</div>
+<script>
+const TYPES = ["대장", "대형", "중형", "중형", "소형", "소형", "밈", "중형", "대형", "소형"];
+const DONE = 6;
+// 시안 B: 코인 카드 줄 (6개 채워짐, 6번째가 방금 생성)
+document.getElementById("b-strip").innerHTML = WF_COINS.map(([n, tk], i) =>
+  i < DONE ? `<div class="coin-card ${i === DONE - 1 ? "new" : ""}" style="flex:1"><b>${tk}</b> <span class="muted small">${n}</span><div class="small muted">${TYPES[i]}</div></div>`
+           : `<div class="coin-card empty" style="flex:1">?<div class="small">&nbsp;</div></div>`).join("");
+// 시안 C: 5×2 카드 격자
+document.getElementById("c-grid").innerHTML = WF_COINS.map(([n, tk], i) =>
+  i < DONE ? `<div class="coin-card ${i === DONE - 1 ? "new" : ""}" style="height:110px;display:flex;flex-direction:column;justify-content:space-between;padding:10px">
+               <span class="chip" style="align-self:flex-start">${TYPES[i]}</span><div><div style="font-size:18px;font-weight:800">${tk}</div><div class="small muted">${n}</div></div></div>`
+           : `<div class="coin-card empty" style="height:110px;display:flex;align-items:center;justify-content:center;font-size:28px">?</div>`).join("");
+</script>
+</body>
+</html>

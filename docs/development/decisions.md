@@ -1,0 +1,57 @@
+# Coin Sim — 결정 기록
+
+개발 설계 중 내린 주요 결정과 그 근거다. 결정을 바꾸면 기존 행을 지우지 말고 새 행을 추가한 뒤, 기존 행의 상태를 "대체됨"으로 바꾼다.
+
+- 기획 단계의 결정(지정가 포함, 코인 구성, 자금·수수료, 섹터, 수집 범위)은 [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) 8장을 본다.
+- 화면 시안 선택은 [SCREENS.md](../SCREENS.md)와 [design/wireframes/](../../design/wireframes/index.html)를 본다.
+
+| # | 날짜 | 영역 | 결정 | 고른 이유 | 버린 대안 (이유) | 상태 |
+|---|---|---|---|---|---|---|
+| D-01 | 2026-11-17 | 기획 | 현실감 검증은 게임 화면이 아니라 개발용 리포트로 (README 게시) | 시뮬레이터 게임의 플레이어에게는 필요 없는 화면 | 게임 안 검증 화면 S-07 (플레이어 가치 없음) | 확정 |
+| D-02 | 2026-11-18 | 구조 | 가격 경로는 엔진이 시드로 전부 미리 생성하고, 플레이어 선택은 포트폴리오에만 영향 | 재현성 보장. 이벤트 체결 가격 규칙을 엔진에서 결정적으로 계산할 수 있음 | — | 확정 |
+| D-03 | 2026-11-18 | 배포 | Vercel | 저장소만 연결하면 됨. 브랜치·PR별 미리보기 URL | GitHub Pages (배포 워크플로 작성, `base` 경로 설정 필요, PR 미리보기 없음) | 확정 |
+| D-04 | 2026-11-18 | 렌더링 | 차트는 처음에만 `setData`, 틱마다 `series.update`. 컴포넌트는 필요한 값만 셀렉터로 구독 | 3배속(초당 10회)에서 확대·스크롤 초기화와 과도한 렌더링 방지 | 틱마다 React로 전부 다시 렌더링 (끊김보다는 UX 버그와 렌더 범위 관리 위험) | 확정 |
+| D-05 | 2026-11-18 | 데이터 | 통계 JSON은 `data/stats/`에 두고 `loadStats()`에서 동적 `import()` | 문서의 폴더 구조 유지, 타입 추론 가능 | `public/` + `fetch` (다시 시도는 자연스럽지만 폴더 구조가 바뀜). 통계 JSON이 gzip 2MB를 넘거나 청크 문제가 반복되면 이쪽으로 전환 | 확정 |
+| D-06 | 2026-11-18 | 데이터 | 동적 import가 실패하면 [다시 시도] = `location.reload()`, `vite:preloadError`에서 1회 자동 새로고침 | 실패한 동적 import는 브라우저가 기억해서 같은 import를 다시 해도 실패함. 배포 직후 이전 청크가 사라지는 경우 대비 | 같은 import 재시도 (실패가 반복됨) | 확정 |
+| D-07 | 2026-11-18 | 라우팅 | React Router (데이터 라우터) | 요즘 서비스 기준으로 브라우저 뒤로 가기가 안 되면 어색함 | store의 `screen` 상태로 전환 (의존성은 줄지만 뒤로 가기 불가) | 확정 |
+| D-08 | 2026-11-18 | 라우팅 | 게임 중 뒤로 가기는 `useBlocker`로 막고 S-04b를 띄움 | 이미 있는 그만두기 흐름 재사용, 실수로 눌러도 판을 지킴 | 브라우저 기본 이탈 경고 (문구를 바꿀 수 없고 결과 없이 판이 사라짐) | 확정 |
+| D-09 | 2026-11-18 | 계획 | 시범 수집(10개) → 통계 스키마 v1 확정 → 엔진·게임 → 전체 통계로 교체 | 빨리 플레이해 볼 수 있음(재미가 주 목표). 수집이 막혀도 개발 계속 | 전체 수집 → 통계 → 엔진 순서 (수집·분석이 늦어지면 전부 멈춤) | 확정 |
+| D-10 | 2026-11-18 | 데이터 | 업비트 약관상 통계를 공개할 수 없으면 다른 API·해외 거래소로 수집 대상 변경. `data/raw/` 형식은 출처와 무관한 표준 컬럼 | 수익률은 통화 단위와 무관해 통계 방식을 그대로 쓸 수 있음. 미리 추상화하지 않고 파일 형식만 고정 | 수집 출처 어댑터를 미리 만듦 (지금 필요 없는 추상화) | 확정 |
+| D-11 | 2026-11-18 | Git | `main`(프로덕션) ← `qa`(통합·플레이테스트) ← `dev/feat/*`, `dev/fix/*`, `dev/hotfix/*`. 작업 → qa는 squash, qa → main은 merge commit | `qa` 고정 미리보기에서 `[테스트 후 결정]` 항목을 플레이테스트할 수 있음 | `main` ← 작업 브랜치 2단 (여러 기능을 합쳐 시험할 고정 환경 없음) | 확정 |
+| D-12 | 2026-11-18 | Git | `dev` 이름의 브랜치는 만들지 않음 | Git은 브랜치를 경로처럼 저장해서 `dev`와 `dev/...`가 공존할 수 없음 | — | 확정 |
+| D-13 | 2026-11-18 | Git | Conventional Commits, 타입·범위는 영어, 내용은 한국어 | 도구 호환과 읽기 편함을 둘 다 챙김 | — | 확정 |
+| D-14 | 2026-11-18 | 환경 | Python은 uv (`pyproject.toml` + `uv.lock`) | 잠금 파일로 분석 결과 재현. `uv run` 한 줄로 실행 | venv + pip (버전 고정을 직접 관리) | 확정 |
+| D-15 | 2026-11-18 | 환경 | Node 패키지 매니저는 npm | 추가 설치 없음, Vercel·CI 설정 불필요 | pnpm (단일 패키지 프로젝트에서는 이점이 작음) | 확정 |
+| D-16 | 2026-11-18 | 금액 | 현금·수수료·체결 금액은 원 단위 정수, 수량은 소수. 반올림은 `game/money.ts`에서만 | 의존성 없이 빠르고, 원 단위 게임에 충분한 정밀도 | decimal.js 같은 십진수 라이브러리 (코드가 장황하고 틱마다 객체 생성) | 확정 |
+| D-17 | 2026-11-18 | 금액 | 수수료는 올림, 매도로 받는 금액은 내림 | 반올림 때문에 없던 돈이 생기는 일을 구조적으로 막음 | — | 확정 |
+| D-18 | 2026-11-18 | 주문 | 지정가 매수는 주문 금액과 수수료를 함께 묶음 | 체결될 때 수수료를 낼 현금이 모자라는 상황 방지 | 주문 금액만 묶음 | 확정 |
+| D-19 | 2026-11-18 | 테스트 | MVP의 UI 테스트는 Vitest + Testing Library로 핵심 상호작용만. E2E는 8단계에서 검토 | 빠르고 CI 부담이 작음. 전체 흐름은 `qa`에서 플레이테스트로 확인 | Playwright E2E (게임 시계 때문에 테스트용 템포와 브라우저 설치 필요) | 확정 |
+| D-20 | 2026-11-18 | 보안 | 비밀키는 `.env`에만 두고 `scripts/`·`analysis/`에서만 사용. `.gitignore` + GitHub 시크릿 스캔, `.claude/settings.json`으로 `.env` 읽기 차단 | `VITE_` 변수는 번들에 그대로 들어감. 비밀키가 거의 없는 지금은 이 정도로 충분 | gitleaks pre-commit 훅 (지금은 과함) | 확정 |
+| D-21 | 2026-11-23 | 주문 | 지정가는 세부 단계 가격마다 판정하고 그 세부 단계 가격에 체결 (건너뛰면 건너뛴 가격, 수량 고정, 남은 묶인 현금 반환). 캔들 고가·저가 = 세부 단계 가격의 최대·최소 | 화면에 보이는 가격과 체결이 일치. 캔들 중간에 넣은 주문도 따로 처리할 필요 없음. 체결 가격이 실제 거래소와 같음 | 캔들이 끝날 때 고가·저가로 판정 (최대 3초 늦은 체결, 선을 지난 걸 보고 취소하는 악용, 주문 이전 구간으로 잘못 체결) / 항상 지정가로 체결 (실제 거래소와 다름) | 확정 |
+| D-22 | 2026-11-23 | 구조 | MVVM을 참고한 계층: Model = `engine`·`game`, Repository = `loadStats()`·`store/recordsStorage.ts`(함수, 인터페이스 없음), ViewModel = `store`, View = `components`·`pages` | 규칙 로직이 UI가 아니라 순수 TS(engine·game)에 몰려 있음. 출처가 하나씩이라 Repository는 함수로 충분 (D-10과 같은 이유) | Feature-Sliced Design (화면 기능이 적어 widgets·features·entities로 나눌 내용이 없음) / Bulletproof React의 features 폴더 (기능이 게임·결과·기록 셋뿐) / Container·Presentational (훅 이후 권장되지 않고, 컨테이너가 틱마다 렌더링되며 범위가 넓어짐) | 확정 |
+| D-23 | 2026-11-23 | 구조 | 값 import는 바로 아래 계층만: `pages → components → store → game → engine → config` (`pages → store`, `game → config` 허용). `import type`은 아래 방향이면 건너뛸 수 있음. ESLint로 강제 | UI가 규칙 로직(체결·수익 계산)에 직접 닿을 수 없게 도구로 막음. 타입은 빌드에서 지워져 로직을 실행할 수 없으므로 건너뛰어도 목적이 유지됨 | 아래 방향이면 건너뛰기 허용 (컴포넌트에서 game 함수를 불러 계산하는 것을 도구로 못 막음) / 타입도 바로 아래만 (타입을 다시 export하는 코드가 계층마다 늘어남) | 확정 |
+| D-24 | 2026-11-23 | 구조 | localStorage 읽기·쓰기는 `store/recordsStorage.ts` 한 파일, 기록 만들기와 형식 검증은 `game/records.ts` 순수 함수 | engine·game은 `window`를 쓸 수 없음. 계층을 늘리지 않고, 검증 로직은 node 환경에서 테스트 가능 | 새 계층 `src/storage/` (파일 하나 때문에 계층이 생김) / Zustand `persist` (저장값 전체를 한 번에 다뤄 깨진 항목만 건너뛰기·저장 실패 처리와 맞지 않음) | 확정 |
+| D-25 | 2026-11-23 | 상태 | store는 도메인별 `gameStore` 하나. 기록 목록은 store 없이 라우트 loader가 읽음 | 틱 하나에 가격·체결·이벤트가 함께 바뀌어 `set` 한 번으로 처리해야 함. S-04·S-04a·S-05가 같은 데이터를 씀 | 화면별 store (틱마다 여러 store 동기화, store끼리 참조) / 작은 store 여러 개 (TkDodo 권장이지만 같은 이유로 맞지 않음) | 확정 |
+| D-26 | 2026-11-23 | 상태 | store 훅은 export하지 않고 원자 커스텀 훅(`useCoinPrice(id)`)과 `useGameActions()`만 export. 액션은 이벤트 이름 | 셀렉터 없이 store 전체를 구독하는 실수가 구조적으로 불가능해짐 (CLAUDE.md 렌더링 규칙) | 셀렉터 함수 export (전체 구독 실수를 리뷰로 막아야 함) / 화면별 ViewModel 훅 (객체를 반환해 `useShallow`를 빠뜨리면 틱마다 전체 렌더링) | 확정 |
+| D-27 | 2026-11-23 | 상태 | game은 `(world, 이전 상태, 입력) → 새 상태` 순수 함수 + 불변 상태. store는 틱마다 `set` 한 번 | 바뀐 부분만 새 참조가 되어 훅이 정확히 반응. fast-check 불변식을 상태 → 상태로 바로 검사 | 상태를 직접 바꾸는 클래스 (스냅샷 복사나 버전 번호 필요, 버전 방식이면 전체 렌더링 위험) | 확정 |
+| D-28 | 2026-11-23 | 렌더링 | 차트는 store가 export하는 구독 함수로 틱 값을 받아 `series.update`. React 렌더링 없음 | 3배속(초당 10회)에서도 차트 컴포넌트가 렌더링되지 않음 | 셀렉터 구독 + `useEffect` (차트 컴포넌트가 틱마다 렌더링) | 확정 |
+| D-29 | 2026-11-23 | 상태 | store 인스턴스는 앱 전체에 하나. `tests/setup.ts`에서 테스트마다 초기화 | 판이 하나뿐인 게임. 코드가 가장 짧고 Zustand 공식 테스트 가이드와 같음 | 만드는 함수 + Context 주입 (필요 없는 Provider 계층) | 확정 |
+| D-30 | 2026-11-23 | 구조 | `components/`는 화면별(`game/`, `result/`, `records/`) + `common/`. 페이지는 `MainPage.tsx`처럼 `Page` 접미어 | SCREENS와 1:1. 주문 패널 재사용(S-04, S-04a)도 `game/` 안에서 해결. 접미어로 컴포넌트와 이름이 겹치지 않음 | 종류별 `charts/`·`forms/`·`modals/` (게임 차트와 결과 그래프가 섞임). 화면 폴더끼리 import 금지 규칙은 넣지 않음 | 확정 |
+| D-31 | 2026-11-23 | 구조 | 타입은 만드는 모듈 안에 (`engine/types.ts`, `game/types.ts`, props는 컴포넌트 파일 안) | 타입도 의존 방향을 따라 ESLint 규칙이 그대로 적용됨 | 전역 `src/types/` (engine이 UI 타입과 같은 폴더를 import, 경계 규칙에 예외 필요) | 확정 |
+| D-32 | 2026-11-23 | 테스트 | 테스트 파일은 대상 파일 옆. `tests/`에는 fixtures와 `setup.ts`만 | 파일을 옮기면 테스트도 따라가고 빠진 테스트가 바로 보임 | `tests/` 아래에 src 구조 복제 (경로 두 벌 관리) | 확정 |
+| D-33 | 2026-11-23 | 금액 | `Math.round·floor·ceil·trunc`를 `src/engine`과 `game/money.ts` 밖에서 ESLint로 금지. 금액은 정수라는 fast-check 불변식 추가 | "반올림은 money.ts에서만" 규칙을 도구로 강제. engine은 난수 범위 계산에 필요해서 제외 | Branded type `Won` (계산할 때마다 brand가 풀려 변환 코드가 game 전체에 퍼짐) | 확정 |
+| D-34 | 2026-11-23 | 라우팅 | 루트 라우트에 `errorElement` | 예상하지 못한 오류에서 흰 화면 대신 안내 | 없음 (오류가 나면 흰 화면) | 확정 |
+| D-35 | 2026-11-23 | 구조 | barrel 파일(다시 export만 하는 `index.ts`) 금지 | Vite 개발 서버가 느려지고 순환 import가 생기기 쉬움 | 폴더마다 `index.ts` 공개 API (FSD 방식) | 확정 |
+| D-36 | 2026-11-23 | 환경 | TypeScript `~6.0.3`으로 고정 (Vite 8, React 19.3, React Router 8, Zustand 5) | typescript-eslint 8.73이 `<6.1.0`만 지원. 타입 정보를 쓰는 ESLint 규칙(`switch-exhaustiveness-check` 등)이 필요함 | TypeScript 7.0 네이티브 컴파일러 (빠르지만 typescript-eslint 미지원). 지원되면 올림 | 확정 |
+| D-37 | 2026-11-23 | 환경 | tsconfig 3개: `tsconfig.json`(src 전체, DOM), `tsconfig.core.json`(engine·game·config, **DOM 타입 없음**), `tsconfig.node.json`(vite.config.ts, scripts/). `typecheck`는 `tsc -p` 세 번. strict에 `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `erasableSyntaxOnly` 등 추가 | engine·game에서 `window`·`localStorage`·`requestAnimationFrame` 등 DOM 전체를 타입 오류로 막음(ESLint는 이름 몇 개만 막음). 배열 범위 밖 접근을 잡고, `import type` 표기를 강제해 D-23의 타입 예외를 구분 | Vite 템플릿의 2개 구성 + `tsc -b` (DOM 차단이 약함) | 확정 |
+| D-38 | 2026-11-23 | 환경 | `build`는 `vite build`만 실행하고 타입 검사는 `typecheck`로 분리. `package.json`에 `engines.node: 24.x` | CI가 `typecheck → build` 순서로 실행해 두 번 검사하지 않음. Vercel이 Node 버전을 `engines`로 정함 [추측: 5단계에서 확인] | `tsc && vite build` (CI에서 중복 검사) | 확정 |
+| D-39 | 2026-11-23 | 구조 | `src/`·`tests/`에서 이름 붙인 export만 사용, default export 금지 (ESLint) | 가져오는 쪽이 이름을 바꿀 수 없어 검색·이름 변경·자동 import가 일관됨. React Router `lazy`는 default export가 필요 없음 | default export 허용 (같은 컴포넌트가 여러 이름으로 불릴 수 있음) | 확정 |
+| D-40 | 2026-11-23 | 도구 | 계층 규칙은 플러그인 없이 `@typescript-eslint/no-restricted-imports`를 폴더별로 설정. 폴더 밖은 `@/`로만 import(`../` 금지), `tests/`는 `@tests/` 별칭으로 테스트 파일에서만 | 추가 의존성 없음. 타입 예외(`allowTypeImports`)를 옵션 하나로 지원. 상대 경로로 규칙을 우회하지 못함 | eslint-plugin-boundaries (의존성 추가, ESLint 10 지원 확인 필요) | 확정 |
+| D-41 | 2026-11-23 | 도구 | typescript-eslint 기본 세트는 `recommendedTypeChecked` + `switch-exhaustiveness-check`, `consistent-type-imports` | `noUncheckedIndexedAccess`와 함께 쓰면 engine 반복문에서 `!`가 필요한 곳이 있음. 필요한 strict 규칙만 나중에 추가 | `strictTypeChecked` (`!` 금지 등으로 가격 경로 코드가 길어짐) | 확정 |
+| D-42 | 2026-11-23 | 도구 | Prettier(작은따옴표, 줄 길이 100)를 CI에서 `format:check`로 검사. 문서 폴더와 CLAUDE.md는 제외 | 포맷이 다른 코드가 병합되지 않음. 기획 문서의 한국어 표가 다시 정렬되지 않게 함 | 로컬 `format`만 (사람·AI마다 포맷이 섞일 수 있음) | 확정 |
+| D-43 | 2026-11-23 | 테스트 | Vitest 프로젝트 2개(`core`: node, `ui`: jsdom)를 `vite.config.ts`에 함께 정의. 전역 함수 없이 명시적 import. 커버리지는 v8, engine·game 라인 90% | engine·game이 DOM 없이 테스트되는 것을 환경으로도 보장(`environment.test.ts`). 별칭을 한 곳에서 정의 | 파일마다 `@vitest-environment` 주석 (빠뜨리기 쉬움) / 별도 `vitest.config.ts` (별칭 중복) | 확정 |
+| D-44 | 2026-11-24 | 환경 | `analysis/`는 패키지(`__init__.py`), 실행은 `uv run --env-file .env python -m analysis.<모듈>`. `pyproject.toml`은 `package = false` | 경로로 실행하면 `analysis/`가 import 경로 맨 앞에 들어가 `statistics.py`·`types.py` 같은 파일이 표준 라이브러리를 가림 | 모듈을 나란히 두고 `python analysis/<스크립트>.py`로 실행 (CLAUDE.md 원래 명령. 이름 충돌 위험) | 확정 |
+| D-45 | 2026-11-24 | 테스트 | Python 테스트도 대상 파일 옆(`test_<모듈>.py`). pandas·numpy는 쓰는 단계(2번 작업)에서 추가 | TS와 같은 규칙(D-32). 지금 필요한 만큼만 설치 | `analysis/tests/` (TS와 규칙이 달라짐) | 확정 |
+| D-46 | 2026-11-24 | 환경 | `.env`가 없으면 Node·uv의 `--env-file`이 실패하므로, 처음 한 번 `cp .env.example .env`로 만든다 (문서에 절차를 적음) | 빈 `.env`로 둘 다 동작하는 것을 확인. 키가 필요해졌을 때 파일이 없으면 바로 실패해 원인이 분명함 | 없으면 건너뛰는 옵션(Node `--env-file-if-exists`) (uv에는 같은 옵션이 없어 처리 방식이 달라지고, 조용히 넘어감) | 확정 |
+| D-47 | 2026-11-24 | 배포 | `vercel.json` SPA rewrite는 `/((?!assets/).*)` → `/index.html` | 배포 뒤 사라진 청크가 HTML 200이 아니라 404를 받아 D-06의 오류 처리가 분명해짐 | 모든 경로 rewrite (JS 자리에 HTML이 와서 원인을 알기 어려움) | 확정 |
+| D-48 | 2026-11-24 | 보안 | `.claude/settings.json`: 커밋·push·PR·`gh repo`·`gh api`·Vercel은 ask, force push·`.env` 읽기(Read, cat·head·tail·less·more·grep)는 deny, 검사 명령은 allow | CLAUDE.md "요청 전에는 커밋·push·PR 하지 않는다"를 도구로 강제. 검사 명령은 확인 창을 줄임 | 문서 규칙만 (지켜지는지 도구로 확인할 수 없음) / PreToolUse 훅으로 `.env`가 들어간 모든 명령 차단 (`--env-file .env` 실행까지 막혀 예외 처리가 복잡) | 확정 |
