@@ -19,6 +19,9 @@ data/raw/
 .env.*
 !.env.example
 
+# 작업 위임 프롬프트와 회고: 로컬에만 둔다 (D-54). 2026-11-24 전 커밋에는 남아 있다
+prompts/
+
 # 도구
 .vercel/
 .claude/settings.local.json

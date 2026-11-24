@@ -260,22 +260,25 @@
 
 ---
 
-## 6. 폴더 구조 (초안)
+## 6. 폴더 구조 (0단계 셋업 반영)
 
 ```
 coin-sim/
 ├─ CLAUDE.md                 # AI 개발 지시서
 ├─ docs/                     # 기획 문서
-│  └─ development/           # 개발 관련 문서 (conventions.md 등)
+│  └─ development/           # 개발 관련 문서 (conventions, decisions, progress 등)
+├─ .github/workflows/ci.yml  # CI (web, analysis 잡)
 ├─ scripts/
 │  └─ collect.ts             # 업비트 캔들 수집 (TypeScript)
-├─ analysis/                 # 통계 추출, 현실감 검증 리포트 (Python)
+├─ analysis/                 # 통계 추출, 현실감 검증 리포트 (Python 패키지, python -m으로 실행)
 ├─ data/
 │  ├─ raw/                   # 수집 원본 (git에서 제외)
 │  └─ stats/                 # 추출한 통계 JSON (커밋, 게임이 동적 import로 불러옴)
 ├─ src/
+│  ├─ main.tsx, router.tsx   # 진입점, 라우트 4개와 루트 errorElement
 │  ├─ config/                # 템포·수수료·등급·이벤트 설정값 (engine·game이 함께 사용)
-│  ├─ engine/                # 순수 TypeScript, React에 의존하지 않음
+│  ├─ engine/                # 순수 TypeScript, React·DOM에 의존하지 않음
+│  │  ├─ types.ts            # GameWorld 등 engine 타입
 │  │  ├─ rng.ts              # 시드 기반 난수
 │  │  ├─ regime.ts           # 상승/하락/횡보 상태 전환 (B)
 │  │  ├─ bootstrap.ts        # 실제 수익률 조각 붙이기 (A)
@@ -285,19 +288,26 @@ coin-sim/
 │  │  ├─ candles.ts          # 수익률 → 캔들 변환
 │  │  ├─ coinFactory.ts      # 가상 코인 생성 (이름, 티커, 성격)
 │  │  └─ feed.ts             # 시세 공급 인터페이스 (다음 프로젝트에서 교체할 지점)
-│  ├─ game/                  # 게임 규칙, React에 의존하지 않음
+│  ├─ game/                  # 게임 규칙, React·DOM에 의존하지 않음
+│  │  ├─ types.ts            # 게임 상태, 주문 등 game 타입
 │  │  ├─ clock.ts            # 재생, 배속, 일시정지
 │  │  ├─ portfolio.ts        # 잔고, 보유량, 평가손익
 │  │  ├─ orders.ts           # 시장가 / 지정가 체결, 수수료
-│  │  ├─ money.ts            # 금액 반올림 규칙 (원 단위 정수)
+│  │  ├─ money.ts            # 금액 반올림 규칙 (원 단위 정수, 반올림은 이 파일에서만)
+│  │  ├─ records.ts          # 기록 만들기와 형식 검증
 │  │  └─ scoring.ts          # 결과, 등급, 업적
-│  ├─ store/                 # Zustand 스토어
-│  ├─ components/            # 차트, 주문 패널, 이벤트 모달, 결과 화면 등
-│  ├─ pages/                 # 시작, 게임, 결과, 기록
-│  └─ main.tsx
+│  ├─ store/
+│  │  ├─ gameStore.ts        # Zustand store 하나. 게임 타이머, 값 하나씩 반환하는 훅
+│  │  └─ recordsStorage.ts   # localStorage 읽기·쓰기 (이 파일에서만)
+│  ├─ components/            # 화면별 game/, result/, records/ + 공용 common/
+│  └─ pages/                 # MainPage, PlayPage, ResultPage, RecordsPage, ErrorPage
 └─ tests/
-   └─ fixtures/              # 테스트용 작은 고정 통계 JSON
+   ├─ setup.ts               # jsdom 테스트 공용 설정
+   └─ fixtures/              # 테스트용 작은 고정 통계 JSON (@tests/ 별칭)
 ```
+
+- 테스트 파일은 대상 파일 옆에 둔다 (`orders.ts` ↔ `orders.test.ts`, `analysis/x.py` ↔ `analysis/test_x.py`).
+- 값 import는 바로 아래 계층만 허용한다: `pages → components → store → game → engine → config` (`pages → store`, `game → config` 허용, `import type`은 건너뛸 수 있음). ESLint로 강제한다. 기준: [development/decisions.md](development/decisions.md) D-23
 
 **설계 원칙**: `engine/`과 `game/`은 React 없이 동작하는 순수 로직으로 둔다. 테스트하기 쉽고, 다음 프로젝트에서 서버로 옮기기 쉽다.
 
@@ -394,3 +404,4 @@ coin-sim/
 | 2026-11-17 | 와이어프레임 검토 | 현실감 검증을 게임 화면에서 개발용 리포트로 변경 (1장 핵심 가치, 3장, 기술 표, 폴더 구조, 7장 4단계) |
 | 2026-11-18 | 개발 설계 | 2장: 지정가 수수료 묶기, 금액 반올림 규칙. 4장: 업비트 약관상 공개 불가 시 대체 출처. 5장: Vercel 확정, React Router·uv·npm·Node 24·fast-check·CI 추가. 6장: CLAUDE.md, docs/development/, src/config/, game/money.ts, tests/fixtures/ 추가. 7장: 진행 순서(시범 수집 → 스키마 확정 → 엔진), 0·1·2단계 내용 |
 | 2026-11-23 | 기획 검토 | 2장: 이벤트 횟수 행 추가(F-12 MVP), 시장가 슬리피지 없음, 지정가 세부 단계 판정·체결 가격, 전파 결과·후속 기사, 복기·업적 MVP 이후 표시. 3장: 숨은 폭락형 0~1개, 고가·저가 = 세부 단계 최대·최소. 7장: 7단계에서 업적 제외. 8장: #6~10 확정, #11~15 미결정 추가 |
+| 2026-11-24 | 0단계 셋업 | 6장: 실제 폴더 구조로 갱신 (router.tsx, types.ts, records.ts, gameStore.ts, recordsStorage.ts, components 하위 폴더, 페이지 파일, tests/setup.ts, CI), 테스트 위치와 계층 import 규칙(D-23) 추가 |

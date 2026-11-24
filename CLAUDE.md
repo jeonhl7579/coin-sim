@@ -23,34 +23,42 @@
 | 요구사항, 비기능 기준 | docs/REQUIREMENTS.md |
 | 플레이테스트로 정할 값 | docs/PLAYTEST.md |
 | 개발 결정과 근거 (바꾸면 새 행 추가) | docs/development/decisions.md |
+| 진행 상황, 열린 질문, 후속 작업 (세션을 시작할 때 먼저 읽음) | docs/development/progress.md |
 
 ## 기술 스택
 
-React + Vite + TypeScript(strict), Zustand, React Router(데이터 라우터 `createBrowserRouter`), lightweight-charts, Vitest + Testing Library + fast-check,
-Node 24 LTS(`.nvmrc`) + npm + tsx(수집), Python 3.12+ + uv + pandas·numpy + ruff + pytest(분석), GitHub Actions, Vercel.
-결과·기록 화면 그래프 라이브러리는 7단계에서 정한다. 그 전에 추가하지 않는다.
+React 19 + Vite 8 + TypeScript 6.0(strict), Zustand 5, React Router 8(데이터 라우터 `createBrowserRouter`), lightweight-charts, Vitest 5 + Testing Library + fast-check,
+Node 24.22.3(`.nvmrc`) + npm + tsx(수집), Python 3.12(`.python-version`) + uv + pandas·numpy + ruff + pytest(분석), GitHub Actions, Vercel.
+- TypeScript 7은 typescript-eslint가 지원할 때까지 쓰지 않는다 (D-36). lock은 `.nvmrc`의 Node에 포함된 npm으로만 만든다 (D-51).
+- 결과·기록 화면 그래프 라이브러리는 7단계에서 정한다. 그 전에 추가하지 않는다.
 
 ## 명령어
 
-0단계에서 `package.json`과 `pyproject.toml`에 만든 뒤, 실제 정의와 이 목록을 맞춘다.
+처음 한 번 (`.env`가 없으면 `--env-file`을 쓰는 명령이 실패한다, D-46):
+
+```bash
+nvm use && npm ci && uv sync && cp .env.example .env
+```
 
 ```bash
 npm run dev            # 개발 서버
-npm run build          # 프로덕션 빌드
-npm run lint           # ESLint (모듈 경계·재현성 규칙 포함)
-npm run typecheck      # tsc --noEmit
-npm run test           # Vitest
-npm run test:coverage  # 커버리지 (engine·game 기준 확인)
+npm run build          # 프로덕션 빌드 (타입 검사는 typecheck로 따로)
+npm run preview        # 빌드 결과 미리보기
+npm run lint           # ESLint (계층 import·재현성·반올림·localStorage 규칙 포함)
+npm run typecheck      # tsc -p로 tsconfig 3개 검사 (src 전체, DOM 없는 engine·game·config, Node 파일)
+npm run test           # Vitest (core: node, ui: jsdom)
+npm run test:coverage  # 커버리지 (engine·game 라인 90%)
 npm run bench          # 시세 생성·틱 처리 벤치마크
-npm run format         # Prettier
+npm run format         # Prettier로 고치기
+npm run format:check   # Prettier 검사 (CI)
 npm run collect        # tsx --env-file=.env scripts/collect.ts
 
 uv run ruff check analysis && uv run ruff format analysis
 uv run pytest analysis
-uv run --env-file .env python analysis/<스크립트>.py
+uv run --env-file .env python -m analysis.<모듈>
 ```
 
-작업을 마치기 전에 `lint`, `typecheck`, `test`를 실행해 통과시킨다. `analysis/`를 고쳤으면 ruff와 pytest도 실행한다.
+작업을 마치기 전에 `lint`, `format:check`, `typecheck`, `test`를 실행해 통과시킨다. `analysis/`를 고쳤으면 ruff와 pytest도 실행한다. CI는 이것과 `test:coverage`, `build`, `npm audit`을 PR마다 검사한다.
 
 ## 구조와 모듈 경계
 
