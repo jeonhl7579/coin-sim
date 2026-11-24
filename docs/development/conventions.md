@@ -11,7 +11,7 @@ CLAUDE.md의 핵심 규칙을 보충하는 세부 기준이다. 충돌하면 CLA
 
 | 항목 | 규칙 |
 |---|---|
-| Node | 24 LTS, `.nvmrc`로 고정. 패키지 매니저는 npm, `package-lock.json` 커밋 |
+| Node | 24 LTS. `.nvmrc`에 정확한 버전(`24.22.3`)을 적고 로컬·CI가 같이 쓴다 (`nvm use`). 패키지 매니저는 그 Node에 포함된 npm, `package-lock.json` 커밋. 다른 npm 버전으로 lock을 만들지 않는다 (D-51). Node를 올릴 때는 `.nvmrc`를 바꾸고 lock을 다시 만든다 |
 | Python | 3.12 이상, uv로 관리. `.python-version`(3.12)으로 고정하고 uv가 받는다. `pyproject.toml`과 `uv.lock` 커밋. 개발 도구(ruff, pytest)는 정확한 버전으로 고정 |
 | 경로 별칭 | `@/` → `src/`, `@tests/` → `tests/` (테스트 파일에서만) |
 | 데이터 | `data/raw/`는 gitignore, `data/stats/`는 커밋 |

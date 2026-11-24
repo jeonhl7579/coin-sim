@@ -39,7 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv는 메이저 태그(v10)를 만들지 않아서 전체 버전으로 고정한다
+      - uses: astral-sh/setup-uv@v10.4.0
       - run: uv sync --locked
       - run: uv run ruff check analysis
       - run: uv run ruff format --check analysis
