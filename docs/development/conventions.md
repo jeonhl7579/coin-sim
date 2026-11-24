@@ -172,5 +172,5 @@ store 타이머(requestAnimationFrame) → 경과 시간
 | hotfix | `main`에서 `dev/hotfix/*` 분기 → `main`에 병합 → 곧바로 `qa`에도 반영 |
 | CI (GitHub Actions) | `.github/workflows/ci.yml`. `qa`·`main` 대상 PR과 push. `web` 잡: `npm ci` → `lint` → `format:check` → `typecheck` → `test:coverage` → `build` → `npm audit --audit-level=high`. `analysis` 잡(항상 실행): `uv sync --locked` → `ruff check` → `ruff format --check` → `pytest` (D-49) |
 | 브랜치 보호 | `main`·`qa`: PR 필수(승인 0명), 필수 체크 `web`·`analysis`, 관리자도 예외 없음, force push·삭제 금지. 병합 방식은 squash와 merge commit만(rebase 금지), squash 커밋 제목·본문은 PR 제목·본문, 병합 후 브랜치 자동 삭제. 그래서 PR 제목을 Conventional Commits 형식으로 쓴다 (D-50) |
-| Vercel | `main` → 프로덕션, `qa` → 고정 미리보기(플레이테스트), PR → 일회성 미리보기 |
+| Vercel | `main` → 프로덕션(`coin-sim-jade.vercel.app`), `qa` → 고정 미리보기(자동 브랜치 URL, 플레이테스트), PR → 일회성 미리보기(Vercel 봇이 PR에 댓글). 미리보기 보호는 끔. 빌드 Node는 프로젝트 설정에서 24.x (D-52, D-53) |
 | 커밋 | `type(scope): 한국어 내용`. type: feat, fix, refactor, test, docs, chore, data, perf. scope: engine, game, store, ui, collect, analysis, config, ci |
