@@ -1,0 +1,46 @@
+# conventions.md 11장, D-49. 잡 이름(web, analysis)은 main·qa 브랜치 보호의 필수 체크다 (D-50).
+# 수집·분석은 CI에서 실행하지 않는다 (CLAUDE.md).
+name: CI
+
+on:
+  pull_request:
+    branches: [qa, main]
+  push:
+    branches: [qa, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  analysis:
+    # 경로 조건 없이 항상 실행한다. 건너뛰면 필수 체크가 대기 상태로 남아 병합이 막힌다.
+    name: analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --locked
+      - run: uv run ruff check analysis
+      - run: uv run ruff format --check analysis
+      - run: uv run pytest analysis
