@@ -11,7 +11,7 @@ CLAUDE.md의 핵심 규칙을 보충하는 세부 기준이다. 충돌하면 CLA
 
 | 항목 | 규칙 |
 |---|---|
-| Node | 24 LTS, `.nvmrc`로 고정. 패키지 매니저는 npm, `package-lock.json` 커밋 |
+| Node | 24 LTS. `.nvmrc`에 정확한 버전(`24.22.3`)을 적고 로컬·CI가 같이 쓴다 (`nvm use`). 패키지 매니저는 그 Node에 포함된 npm, `package-lock.json` 커밋. 다른 npm 버전으로 lock을 만들지 않는다 (D-51). Node를 올릴 때는 `.nvmrc`를 바꾸고 lock을 다시 만든다 |
 | Python | 3.12 이상, uv로 관리. `.python-version`(3.12)으로 고정하고 uv가 받는다. `pyproject.toml`과 `uv.lock` 커밋. 개발 도구(ruff, pytest)는 정확한 버전으로 고정 |
 | 경로 별칭 | `@/` → `src/`, `@tests/` → `tests/` (테스트 파일에서만) |
 | 데이터 | `data/raw/`는 gitignore, `data/stats/`는 커밋 |
@@ -170,7 +170,7 @@ store 타이머(requestAnimationFrame) → 경과 시간
 | 작업 흐름 | `qa`에서 분기 → PR → squash 병합으로 `qa` |
 | 릴리스 | 단계가 끝나고 `qa`에서 플레이테스트를 마치면 `qa → main` PR을 merge commit으로 병합하고 `v0.x` 태그 |
 | hotfix | `main`에서 `dev/hotfix/*` 분기 → `main`에 병합 → 곧바로 `qa`에도 반영 |
-| CI (GitHub Actions) | `qa`·`main` 대상 PR과 push: `npm ci` → `lint` → `format:check` → `typecheck` → `test` → `build` → `npm audit`. `analysis/`가 바뀌면 `ruff check`, `pytest` |
-| 브랜치 보호 | `main`·`qa` 직접 push 금지, CI 통과를 병합 조건으로 |
+| CI (GitHub Actions) | `.github/workflows/ci.yml`. `qa`·`main` 대상 PR과 push. `web` 잡: `npm ci` → `lint` → `format:check` → `typecheck` → `test:coverage` → `build` → `npm audit --audit-level=high`. `analysis` 잡(항상 실행): `uv sync --locked` → `ruff check` → `ruff format --check` → `pytest` (D-49) |
+| 브랜치 보호 | `main`·`qa`: PR 필수(승인 0명), 필수 체크 `web`·`analysis`, 관리자도 예외 없음, force push·삭제 금지. 병합 방식은 squash와 merge commit만(rebase 금지), squash 커밋 제목·본문은 PR 제목·본문, 병합 후 브랜치 자동 삭제. 그래서 PR 제목을 Conventional Commits 형식으로 쓴다 (D-50) |
 | Vercel | `main` → 프로덕션, `qa` → 고정 미리보기(플레이테스트), PR → 일회성 미리보기 |
 | 커밋 | `type(scope): 한국어 내용`. type: feat, fix, refactor, test, docs, chore, data, perf. scope: engine, game, store, ui, collect, analysis, config, ci |
