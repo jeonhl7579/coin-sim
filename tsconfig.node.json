@@ -1,0 +1,9 @@
+{
+  // Node에서 실행하는 파일 (빌드 설정, scripts/)
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "scripts"]
+}

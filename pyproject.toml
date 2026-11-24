@@ -1,0 +1,28 @@
+[project]
+name = "coin-sim-analysis"
+version = "0.0.0"
+description = "Coin Sim 통계 추출과 현실감 검증 리포트 (analysis/)"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.6",
+]
+
+[tool.uv]
+# 설치할 패키지가 아니라 스크립트 모음이다. 실행은 `uv run python -m analysis.<모듈>` (D-44)
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# pandas(PD)·numpy(NPY) 규칙은 2번 작업에서 추가한다
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["analysis"]
+addopts = ["--strict-markers"]

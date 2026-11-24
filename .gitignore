@@ -1,0 +1,25 @@
+# 의존성·빌드
+node_modules/
+dist/
+coverage/
+*.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+
+# 데이터: 수집 원본은 제외, data/stats/는 커밋 (conventions 1장)
+data/raw/
+
+# 비밀 정보: .env는 커밋하지 않는다. 키 이름은 .env.example에
+.env
+.env.*
+!.env.example
+
+# 도구
+.vercel/
+.claude/settings.local.json
+.DS_Store

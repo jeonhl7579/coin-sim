@@ -1,0 +1,10 @@
+{
+  // engine·game·config 전용. DOM 타입이 없어서 window, localStorage, fetch 등을 쓰면 타입 오류가 난다 (D-37).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/engine", "src/game", "src/config"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.bench.ts"]
+}

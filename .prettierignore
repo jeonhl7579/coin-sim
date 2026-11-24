@@ -1,0 +1,14 @@
+# 빌드·생성물
+dist
+coverage
+package-lock.json
+data
+
+# 기획·개발 문서 (한국어 표가 다시 정렬되지 않게)
+docs
+prompts
+design
+CLAUDE.md
+
+# 도구 설정
+.claude
