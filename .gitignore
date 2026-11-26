@@ -11,8 +11,9 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
-# 데이터: 수집 원본은 제외, data/stats/는 커밋 (conventions 1장)
+# 데이터: 수집 원본과 분석 중간 산출물은 제외, data/stats/는 커밋 (data-spec 1장, D-56)
 data/raw/
+data/interim/
 
 # 비밀 정보: .env는 커밋하지 않는다. 키 이름은 .env.example에
 .env
