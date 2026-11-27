@@ -1,7 +1,7 @@
 """정제 (F-02, data-spec 4.4): 통계에 쓸 1시간 수익률을 만들고 기준에 맞지 않는 코인을 뺀다.
 
 원칙: 값을 만들어 채우지 않는다. 빈 시간은 끊김으로 보고, 바로 앞 시간에 캔들이 있을 때만
-수익률을 만든다 (D-64).
+수익률을 만든다 (D-64). 호가 단위 잡음이 있는 달의 수익률도 버린다 (D-76).
 
 실행: uv run python -m analysis.clean  →  data/interim/clean_report.json (로컬, 실제 이름 포함)
 """
@@ -33,6 +33,9 @@ class CleanParams:
     min_daily_quote_volume: float = 1e8
     # [임시값] 첫~마지막 캔들 사이 빈 시간 비율
     max_missing_ratio: float = 0.05
+    # [임시값] 호가 단위 잡음 (D-76): 그 달(UTC)의 0이 아닌 1시간 수익률 중 가장 작은 값이 이 값
+    # 이상이면 가격이 호가 칸을 건너뛰는 달로 보고 그 달 수익률을 버린다
+    tick_min_move: float = 0.02
 
 
 # 제외 이유. 순서 = 필터 적용 순서 (data-spec 4.4 meta.markets.excluded의 키)
@@ -78,6 +81,16 @@ def format_error(candles: pd.DataFrame) -> str | None:
     return None
 
 
+def drop_tick_limited_months(returns: pd.Series, min_move: float) -> tuple[pd.Series, int]:
+    """호가 단위가 커서 가격이 칸을 건너뛰는 달의 수익률을 버린다. (남은 수익률, 버린 달 수)"""
+    month = pd.Series(returns.index.strftime("%Y-%m"), index=returns.index)
+    nonzero = returns != 0
+    smallest = returns[nonzero].abs().groupby(month[nonzero]).min()
+    bad = smallest[smallest >= min_move].index
+    keep = ~month.isin(bad)
+    return returns[keep], len(bad)
+
+
 def missing_ratio(candles: pd.DataFrame) -> float:
     if len(candles) == 0:
         return 0.0
@@ -104,10 +117,11 @@ def price_range(candles: pd.DataFrame) -> float:
 def clean_market(market: str, candles: pd.DataFrame, params: CleanParams) -> CleanResult:
     """필터를 EXCLUDE_REASONS 순서로 적용한다. 처음 걸린 이유 하나만 남긴다."""
     candles = candles[candles["time"] >= pd.Timestamp(params.start)].reset_index(drop=True)
-    returns = hourly_returns(candles)
+    returns, tick_months = drop_tick_limited_months(hourly_returns(candles), params.tick_min_move)
     metrics: dict[str, float | int | None] = {
         "candles": len(candles),
         "returns": len(returns),
+        "tickLimitedMonths": tick_months,
         "annualVol": round(annual_volatility(returns), 4),
         "priceRange": round(price_range(candles), 4),
         "dailyQuoteVolumeMedian": round(daily_quote_volume_median(candles)),

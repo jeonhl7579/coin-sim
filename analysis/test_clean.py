@@ -12,6 +12,7 @@ from analysis.clean import (
     clean_all,
     clean_market,
     daily_quote_volume_median,
+    drop_tick_limited_months,
     exchange_outage_hours,
     format_error,
     hourly_returns,
@@ -194,3 +195,25 @@ def test_clean_all_이유별_제외_수와_사용_목록() -> None:
         "maxMissingRatio": 0,
     }
     assert [r.market for r in summary.results] == ["KRW-AAA", "KRW-BBB", "KRW-CCC"]
+
+
+class TestTickLimitedMonths:
+    def test_가장_작은_움직임이_2퍼센트_이상인_달만_버린다(self) -> None:
+        # 1월: ±3%씩만 움직임(칸을 건너뜀), 2월: ±0.5%와 0
+        jan = [h for h in range(24 * 31)]
+        feb = [h for h in range(24 * 31, 24 * 31 + 48)]
+        closes = list(100 * np.cumprod(np.where(np.arange(len(jan)) % 2, 1.03, 1 / 1.03)))
+        closes += list(closes[-1] * np.cumprod(np.where(np.arange(48) % 3 == 0, 1.0, 1.005)))
+        returns = hourly_returns(make_candles(closes, hours=jan + feb))
+        kept, dropped = drop_tick_limited_months(returns, 0.02)
+        assert dropped == 1
+        assert kept.index.min() >= pd.Timestamp("2024-02-01T00:00:00Z")
+        assert len(kept) == 48
+
+    def test_clean_market은_버린_달_수를_남기고_나머지로_판정한다(self) -> None:
+        closes = list(100 * np.cumprod(np.where(np.arange(24 * 31) % 2, 1.03, 1 / 1.03)))
+        closes += list(closes[-1] * volatile_closes(48, step=0.005) / 100)
+        result = clean_market("KRW-AAA", make_candles(closes), SMALL)
+        assert result.metrics["tickLimitedMonths"] == 1
+        assert result.returns is not None
+        assert result.returns.index.min() >= pd.Timestamp("2024-02-01T00:00:00Z")
