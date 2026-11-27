@@ -155,6 +155,24 @@ data/raw/
 - 형식은 계약이 아니다. `analysis/` 안에서만 읽고 쓰며, 지워도 원본에서 다시 만들 수 있어야 한다.
 - 실제 코인을 알아볼 수 있는 값은 이 폴더 밖으로 내보내지 않는다.
 
+### 3.1 정제 규칙 (F-02, `analysis/clean.py`)
+
+통계에 쓸 1시간 수익률을 만들고, 기준에 맞지 않는 코인을 뺀다. 값을 만들어 채우지 않는다 (D-64).
+
+| 순서 | 규칙 | 값 | 제외 이유 키 |
+|---|---|---|---|
+| 0 | 업비트 정식 서비스 시작(2017-10-24 00:00 KST) 전 캔들은 버린다 | `2017-10-23T15:00:00Z` | — |
+| 1 | 형식 오류: 가격 0 이하, 고가 < 저가, 시가·종가가 고가·저가 범위 밖 | — | `invalidFormat` |
+| 2 | 최소 기간: 1시간 수익률 수 | 4,380 이상 (6개월) | `minPeriod` |
+| 3 | 스테이블코인: 연환산 변동성 < 30% **이고** 종가 범위(상위 1% ÷ 하위 1%) < 1.5 **[임시값]** | | `stablecoin` |
+| 4 | 최소 거래대금: 일(UTC 날짜) 거래대금 합의 중앙값 **[임시값]** | 1억 원 이상 | `minQuoteVolume` |
+| 5 | 빈 시간 비율: 첫~마지막 캔들 사이 **[임시값]** | 5% 이하 | `maxMissingRatio` |
+
+- 수익률 = 종가 ÷ 바로 앞 시간 종가 − 1. **바로 앞 시간에 캔들이 있을 때만** 만든다. 빈 시간은 끊김이고, 수익률 조각(4.2)도 끊김을 넘지 않는다.
+- 처음 걸린 이유 하나만 남긴다. 큰 급등락은 버리지 않는다 (급등락 통계의 재료).
+- 거래소 전체 공백(그 시각에 상장된 마켓이 4개 이상이고 모두 빈 시간)은 세기만 한다.
+- `uv run python -m analysis.clean`은 결과를 `data/interim/clean_report.json`(로컬, 실제 이름 포함)에 쓴다. 통계 단계는 정제 결과를 메모리로 받는다.
+
 ---
 
 ## 4. 게임용 통계 (`data/stats/stats.json`)
@@ -235,7 +253,7 @@ data/raw/
     "source": "upbit-krw-1h",
     "dataFrom": "2017-09-25T03:00:00Z",
     "dataUntil": "2026-11-26T03:00:00Z",
-    "markets": { "collected": 301, "used": 0, "excluded": { "minQuoteVolume": 0, "minPeriod": 0, "stablecoin": 0 } },
+    "markets": { "collected": 301, "used": 0, "excluded": { "invalidFormat": 0, "minPeriod": 0, "stablecoin": 0, "minQuoteVolume": 0, "maxMissingRatio": 0 } },
     "archetypeCounts": { "leader": 0, "large": 0, "mid": 0, "small": 0, "crash": 0 },
     "quantileGrid": [],
     "analysisParams": {}
@@ -246,7 +264,7 @@ data/raw/
 - 같은 원본 + 같은 `uv.lock` + 같은 `analysisParams`면 **바이트 단위로 같은** `stats.json`이 나와야 한다.
 - 그래서 실행 시각(`generatedAt`)을 넣지 않고, 원본에서 정해지는 시각(`dataFrom`, `dataUntil` = 사용한 원본의 첫·마지막 캔들)을 넣는다 (D-62). conventions 9장의 "생성 시각"은 이것으로 바꾼다 (기획 문서 수정 목록).
 - 키는 정렬해서 쓰고, 숫자 형식과 섞기 시드를 고정한다.
-- `excluded.stablecoin`: 스테이블코인 제외 기준은 6.1(정제)에서 정한다 **[분석 후 결정]**.
+- `markets.excluded`의 키와 기준은 3.1 정제 규칙이다. 기준값은 `analysisParams`에 넣는다.
 
 ---
 
@@ -388,3 +406,4 @@ FEATURES와 OVERVIEW 3장에서 엔진이 쓰는 값을 거꾸로 뽑았다. 상
 | 2026-11-28 | 2.5에 `running` 상태, 저장 시점, 깨진 CSV 보호, 값이 다른 중복 처리 추가 (4.3) |
 | 2026-11-28 | 2.6 빈 구간 보고서 필드 정의, 2.7에 임시 파일 정리와 동시 실행 금지 추가 (4.4) |
 | 2026-11-28 | 부록 A #3·4·10 실측값, 시범 수집 결과 추가 (5단계) |
+| 2026-11-28 | 3.1 정제 규칙 추가, 4.4 제외 이유 키 5개로 (6.1) |
