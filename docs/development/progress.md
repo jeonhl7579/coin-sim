@@ -3,7 +3,7 @@
 세션을 시작할 때 먼저 읽는 인계 문서다. **상태만** 적는다. 결정과 근거는 [decisions.md](decisions.md), 플레이테스트 결과는 [PLAYTEST.md](../PLAYTEST.md), 데이터 형식은 [data-spec.md](data-spec.md)에 두고 여기서는 링크만 한다.
 
 - 형식: 로컬 `prompts/stage_dev_prompt.md`의 "인계 문서" (`prompts/`는 git에서 제외, 로컬과 저장소 밖 백업에만 있음)
-- 마지막 갱신: 2026-11-26 (2번 작업 3단계: 데이터 명세 초안)
+- 마지막 갱신: 2026-11-28 (2번 작업 4·5단계: 수집기, 시범 수집)
 
 ---
 
@@ -12,7 +12,7 @@
 | 단계 | 상태 | 작업 프롬프트 | 비고 |
 |---|---|---|---|
 | 0. 프로젝트 셋업 | 완료 (2026-11-24, `v0.0`) | `prompts/setup_prompt.md` | 결정 D-22~D-54. 릴리스 PR #3 |
-| 1. 데이터 수집 | 진행 중 | `prompts/data_pipeline_prompt.md` | 출처 조사·명세 초안 완료. 다음은 수집기 |
+| 1. 데이터 수집 | 진행 중 | `prompts/data_pipeline_prompt.md` | 수집기·시범 수집(10개) 완료. 전체 수집은 2번 작업 8단계 |
 | 2. 통계 추출 | 대기 | 같음 | 통계 JSON 스키마 v1 |
 | 3. 생성 엔진 | 대기 | `prompts/stage_dev_prompt.md` | 2단계 스키마 v1 이후 |
 | 4~8 | 대기 | 같음 | |
@@ -38,8 +38,8 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 | 1. 현황 확인 | 완료 | 셋업 결과 확인, [추측] 13개와 결정 목록 |
 | 2. 출처 조사 | 완료 | [data-spec.md](data-spec.md) 부록 A. 키 불필요, 원화 마켓 301개, 캔들 누락 확인, 상장 폐지 코인 받을 수 없음. 약관 판단: 가공한 통계만 배포 (D-55, D-56) |
 | 3. 데이터 명세 초안 | 완료 | [data-spec.md](data-spec.md) 초안, D-57~D-63 |
-| 4. 수집기 개발 | 대기 | 마켓 목록 → 나눠 받기·요청 제한 → 상태 저장·이어 받기 → 빈 구간 보고서 |
-| 5. 시범 수집 (10개) | 대기 | |
+| 4. 수집기 개발 | 완료 | `scripts/collect.ts`, `scripts/collect/`. 마켓 목록 → 나눠 받기·요청 제한(초당 8회, 429·418·5xx 처리) → CSV 저장·이어 받기·중복 제거 → 빈 구간 보고서. data-spec 2장 |
+| 5. 시범 수집 (10개) | 완료 | 캔들 48만 8,990개, 요청 1,652건, 3분 28초. 끊고 다시 실행해서 이어 받기, 다시 실행해도 같은 파일 확인. 결과는 [data-spec.md](data-spec.md) 부록 A |
 | 6. 통계 추출 | 대기 | |
 | 7. 스키마 v1 확정과 내보내기 | 대기 | |
 | 8. 전체 수집 (백그라운드) | 대기 | |
@@ -50,6 +50,7 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 | 항목 | 언제까지 | 기준 |
 |---|---|---|
 | 스테이블코인 제외 기준, 최소 거래대금 기준값 | 2번 작업 6.1 | [data-spec.md](data-spec.md) 4.4 |
+| 거래소 전체 공백(56구간, 128시간)을 수익률 계산에서 어떻게 다룰지, 2017-10-24 전 데이터(일부 코인 82시간 공백)를 쓸지 | 2번 작업 6.1 | data-spec 부록 A "시범 수집 결과" |
 | 상태 구분 방법, 수익률 조각 길이, 시장 전체 흐름을 만드는 방법, 성격 분류 기준, 폭락형 수치의 출처 | 2번 작업 6.3 | data-spec 4.2 [분석 후 결정] |
 | 가공 기준의 그룹당 최소 코인 수 N, 분위수 격자, 숫자 자릿수 | 2번 작업 6~7 | data-spec 4.1, 4.3 |
 | OVERVIEW 8장 #11~14 (지연 전파 처리) | 3단계 전 | [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) 8장 |
@@ -60,7 +61,7 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 
 | 문서 | 고칠 내용 | 근거 |
 |---|---|---|
-| OVERVIEW 4장 "예상 규모" | 코인 수 301, 요청당 200 확인, 코인당 최대 약 8만(BTC 2017-09-25부터). 수집 시간·용량은 시범 수집 뒤에 | data-spec 부록 A |
+| OVERVIEW 4장 "예상 규모" | 코인 수 302(계속 바뀜), 요청당 200 확인, 코인당 최대 약 8만(2017-09-25부터). 수집 시간·용량 상한 약 4.2시간·1.8GB(초당 7.9건, 행당 약 74바이트). 정확한 값은 전체 수집 뒤 | data-spec 부록 A |
 | OVERVIEW 4장 "데이터 주의점" | 상장 폐지 코인 받을 수 없음, 캔들 누락, 시가총액·섹터 없음에서 [추측] 삭제. 스테이블코인 제외 추가. 보관 층(원본·중간은 로컬, 가공한 통계만 배포) | 부록 A, D-56 |
 | OVERVIEW 6장 폴더 구조 | `data/interim/` 추가 | D-56 |
 | OVERVIEW 9장, REQUIREMENTS NFR-11 | 확인 결과와 약관 판단 반영 | 부록 A |
@@ -95,5 +96,5 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 
 ## 다음 세션이 먼저 할 일
 
-1. `dev/feat/data-spec` PR이 `qa`에 병합됐는지 확인한다.
-2. `prompts/data_pipeline_prompt.md`의 4단계(수집기 개발)를 `qa`에서 분기한 `dev/feat/data-collect`에서 시작한다. 계약은 [data-spec.md](data-spec.md) 2장이다.
+1. `dev/feat/data-collect` PR이 `qa`에 병합됐는지 확인한다.
+2. `prompts/data_pipeline_prompt.md`의 6단계(통계 추출)를 `qa`에서 분기한 `dev/feat/data-stats`에서 시작한다. 시범 수집 원본은 로컬 `data/raw/`에 있다(다른 컴퓨터면 `npm run collect -- --markets …`로 다시 받는다).
