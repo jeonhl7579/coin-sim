@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parseCliArgs } from './collect/cli';
 import { parseKrwMarkets, selectMarkets, type MarketsFile } from './collect/markets';
 import { writeJsonAtomic } from './collect/storage';
-import { fetchMarketList } from './collect/upbit';
+import { createUpbitClient } from './collect/upbit';
 
 const RAW_DIR = fileURLToPath(new URL('../data/raw/', import.meta.url));
 const MARKETS_FILE = `${RAW_DIR}markets.json`;
@@ -24,8 +24,9 @@ async function main(argv: string[]): Promise<number> {
   }
   const { options } = parsed;
 
+  const client = createUpbitClient();
   const fetchedAt = nowIso();
-  const all = parseKrwMarkets(await fetchMarketList());
+  const all = parseKrwMarkets(await client.fetchMarketList());
   const file: MarketsFile = { fetchedAt, markets: all };
   await writeJsonAtomic(MARKETS_FILE, file);
   const warned = all.filter((m) => m.warning).length;
