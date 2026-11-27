@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,10 +7,12 @@ import {
   CSV_HEADER,
   type CollectState,
   formatCandleCsv,
+  listCandleMarkets,
   parseCandleCsv,
   parseState,
   readCandleCsv,
   readState,
+  removeTempFiles,
   writeFileAtomic,
   writeJsonAtomic,
   writeState,
@@ -157,5 +159,42 @@ describe('수집 상태', () => {
     const path = join(dir, 'state.json');
     await writeFile(path, '{', 'utf8');
     await expect(readState(path)).rejects.toThrow();
+  });
+});
+
+describe('removeTempFiles', () => {
+  it('하위 폴더까지 *.tmp-<pid> 파일만 지우고 개수를 돌려준다', async () => {
+    const sub = join(dir, 'candles', '1h');
+    await mkdir(sub, { recursive: true });
+    await writeFile(join(sub, 'KRW-AAA.csv'), 'keep', 'utf8');
+    await writeFile(join(sub, 'KRW-AAA.csv.tmp-123'), 'x', 'utf8');
+    await writeFile(join(dir, 'state.json.tmp-45'), 'x', 'utf8');
+    await writeFile(join(dir, 'note.tmp'), 'keep', 'utf8');
+    expect(await removeTempFiles(dir)).toBe(2);
+    expect((await readdir(dir, { recursive: true })).sort()).toEqual([
+      'candles',
+      join('candles', '1h'),
+      join('candles', '1h', 'KRW-AAA.csv'),
+      'note.tmp',
+    ]);
+  });
+
+  it('폴더가 없으면 0', async () => {
+    expect(await removeTempFiles(join(dir, 'none'))).toBe(0);
+  });
+});
+
+describe('listCandleMarkets', () => {
+  it('CSV 파일의 마켓 코드만 오름차순으로', async () => {
+    const sub = join(dir, 'candles', '1h');
+    await mkdir(sub, { recursive: true });
+    for (const name of ['KRW-CCC.csv', 'KRW-AAA.csv', 'KRW-BBB.csv.tmp-1', 'readme.txt']) {
+      await writeFile(join(sub, name), '', 'utf8');
+    }
+    expect(await listCandleMarkets(dir)).toEqual(['KRW-AAA', 'KRW-CCC']);
+  });
+
+  it('폴더가 없으면 빈 배열', async () => {
+    expect(await listCandleMarkets(dir)).toEqual([]);
   });
 });

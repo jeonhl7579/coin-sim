@@ -1,15 +1,36 @@
 // data/raw/ 파일 읽기·쓰기 (data-spec 2.4, 2.5)
 // 쓰기는 임시 파일에 쓴 뒤 이름을 바꿔서 중간에 끊겨도 파일이 깨지지 않게 한다 (D-59).
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { type Candle, isHourIso } from './candles';
+
+const TEMP_SUFFIX = /\.tmp-\d+$/;
 
 export async function writeFileAtomic(path: string, data: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const tmp = `${path}.tmp-${process.pid}`;
   await writeFile(tmp, data, 'utf8');
   await rename(tmp, path);
+}
+
+/**
+ * 쓰는 도중에 끊긴 실행이 남긴 임시 파일(`*.tmp-<pid>`)을 지우고 개수를 돌려준다.
+ * 수집기를 동시에 두 개 돌리지 않는다는 전제다 (data-spec 2.7).
+ */
+export async function removeTempFiles(dir: string): Promise<number> {
+  let entries: string[];
+  try {
+    entries = await readdir(dir, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return 0;
+    }
+    throw error;
+  }
+  const temps = entries.filter((entry) => TEMP_SUFFIX.test(basename(entry)));
+  await Promise.all(temps.map((entry) => rm(join(dir, entry), { force: true })));
+  return temps.length;
 }
 
 export function writeJsonAtomic(path: string, value: unknown): Promise<void> {
@@ -78,6 +99,23 @@ export function parseCandleCsv(text: string, where: string): Candle[] {
     candles.push({ time, open, high, low, close, volume, quoteVolume });
   }
   return candles;
+}
+
+/** candles/1h/ 아래 CSV가 있는 마켓 코드, 오름차순. 폴더가 없으면 빈 배열 */
+export async function listCandleMarkets(rawDir: string): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(join(rawDir, 'candles', '1h'));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+  return names
+    .filter((name) => name.endsWith('.csv'))
+    .map((name) => name.slice(0, -'.csv'.length))
+    .sort();
 }
 
 /** 파일이 없으면 undefined */

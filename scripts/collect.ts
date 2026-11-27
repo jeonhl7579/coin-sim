@@ -6,17 +6,33 @@ import { fileURLToPath } from 'node:url';
 import { parseCliArgs } from './collect/cli';
 import { collectMarket, type MarketResult } from './collect/collectMarket';
 import {
+  buildGapsReport,
+  type MarketGapError,
+  type MarketGapSummary,
+  summarizeGaps,
+} from './collect/gaps';
+import {
   type MarketEntry,
   type MarketsFile,
   parseKrwMarkets,
   selectMarkets,
 } from './collect/markets';
-import { type CollectState, readState, writeJsonAtomic, writeState } from './collect/storage';
+import {
+  candlePath,
+  type CollectState,
+  listCandleMarkets,
+  readCandleCsv,
+  readState,
+  removeTempFiles,
+  writeJsonAtomic,
+  writeState,
+} from './collect/storage';
 import { createUpbitClient, UpbitBlockedError, type UpbitClient } from './collect/upbit';
 
 const RAW_DIR = fileURLToPath(new URL('../data/raw/', import.meta.url));
 const MARKETS_FILE = `${RAW_DIR}markets.json`;
 const STATE_FILE = `${RAW_DIR}state.json`;
+const GAPS_FILE = `${RAW_DIR}reports/gaps.json`;
 
 /** 초 단위 UTC ISO 8601 (예: 2026-11-28T04:12:00Z) */
 function nowIso(): string {
@@ -95,6 +111,40 @@ async function collectCandles(markets: MarketEntry[], client: UpbitClient): Prom
   return failed > 0 ? 1 : 0;
 }
 
+/** 모든 CSV에서 빈 구간 보고서를 새로 만든다 (data-spec 2.6). CSV는 하나씩 읽는다 */
+async function writeGapsReport(listed: ReadonlySet<string>): Promise<void> {
+  const results: (MarketGapSummary | MarketGapError)[] = [];
+  for (const market of await listCandleMarkets(RAW_DIR)) {
+    try {
+      const summary = summarizeGaps(
+        market,
+        (await readCandleCsv(candlePath(RAW_DIR, market))) ?? [],
+      );
+      if (summary !== undefined) {
+        results.push(summary);
+      }
+    } catch (error) {
+      results.push({ market, error: describe(error) });
+    }
+  }
+  const report = buildGapsReport(results, listed);
+  await writeJsonAtomic(GAPS_FILE, report);
+
+  const { summary } = report;
+  console.log(
+    `[collect] 빈 구간 보고서 → data/raw/reports/gaps.json: 마켓 ${summary.markets}개, 캔들 ${summary.candles}개, 빈 시간 ${summary.missingHours}, 읽기 오류 ${summary.errors}`,
+  );
+  const worst = report.markets
+    .filter((m): m is Exclude<typeof m, MarketGapError> => !('error' in m))
+    .sort((a, b) => b.missingRatio - a.missingRatio)
+    .slice(0, 5);
+  for (const m of worst) {
+    console.log(
+      `[collect]   ${m.market} 빈 시간 ${(m.missingRatio * 100).toFixed(2)}% (${m.missingHours}/${m.expectedHours}), 가장 긴 ${m.longestGapHours}시간`,
+    );
+  }
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCliArgs(argv);
   if (!parsed.ok) {
@@ -102,6 +152,11 @@ async function main(argv: string[]): Promise<number> {
     return 1;
   }
   const { options } = parsed;
+
+  const removed = await removeTempFiles(RAW_DIR);
+  if (removed > 0) {
+    console.log(`[collect] 끊긴 실행이 남긴 임시 파일 ${removed}개를 지웠다`);
+  }
 
   const client = createUpbitClient();
   const fetchedAt = nowIso();
@@ -123,7 +178,9 @@ async function main(argv: string[]): Promise<number> {
   if (options.marketsOnly) {
     return 0;
   }
-  return collectCandles(selected.markets, client);
+  const code = await collectCandles(selected.markets, client);
+  await writeGapsReport(new Set(all.map((m) => m.market)));
+  return code;
 }
 
 try {
