@@ -5,55 +5,13 @@ import {
   HOUR_MS,
   isClosed,
   isHourIso,
+  mergeCandles,
   parseCandlePage,
 } from './candles';
+import { fakeExchange, hour, rawCandle, TEST_MARKET } from './testing';
 
-const MARKET = 'KRW-AAA';
-
-/** 업비트 응답 형식의 가짜 캔들 */
-function raw(time: string, overrides: Record<string, unknown> = {}) {
-  return {
-    market: MARKET,
-    candle_date_time_utc: time.replace(/Z$/, ''),
-    candle_date_time_kst: 'ignored',
-    opening_price: 100,
-    high_price: 110,
-    low_price: 90,
-    trade_price: 105,
-    timestamp: 0,
-    candle_acc_trade_price: 1000,
-    candle_acc_trade_volume: 10,
-    unit: 60,
-    ...overrides,
-  };
-}
-
-const hour = (i: number) =>
-  new Date(Date.UTC(2024, 0, 1) + i * HOUR_MS).toISOString().replace('.000', '');
-
-/**
- * 첫 캔들 hour(0)부터 hour(total-1)까지 있는 가짜 거래소.
- * missing에 든 시간은 체결이 없어 캔들이 없다. 응답은 to 이전(미포함) 최신 200개, 최신 → 과거.
- */
-function fakeExchange(total: number, missing: number[] = []) {
-  const all = Array.from({ length: total }, (_, i) => i)
-    .filter((i) => !missing.includes(i))
-    .map((i) => hour(i));
-  const requests: (string | undefined)[] = [];
-  return {
-    requests,
-    fetchPage: (market: string, to?: string) => {
-      requests.push(to);
-      const older = to === undefined ? all : all.filter((t) => t < to);
-      return Promise.resolve(
-        older
-          .slice(-200)
-          .reverse()
-          .map((t) => raw(t, { market })),
-      );
-    },
-  };
-}
+const MARKET = TEST_MARKET;
+const raw = rawCandle;
 
 describe('parseCandlePage', () => {
   it('업비트 필드를 data-spec 2.4 형식으로 바꾼다', () => {
@@ -62,12 +20,12 @@ describe('parseCandlePage', () => {
     ).toEqual([
       {
         time: '2024-01-01T01:00:00Z',
-        open: 100,
-        high: 110,
-        low: 90,
-        close: 105,
-        volume: 10,
-        quoteVolume: 1000,
+        open: 101,
+        high: 111,
+        low: 91,
+        close: 106,
+        volume: 0.0000001,
+        quoteVolume: 1000.5,
       },
       {
         time: '2024-01-01T00:00:00Z',
@@ -75,8 +33,8 @@ describe('parseCandlePage', () => {
         high: 110,
         low: 90,
         close: 105,
-        volume: 10,
-        quoteVolume: 1000,
+        volume: 0.0000001,
+        quoteVolume: 1000.5,
       },
     ]);
   });
@@ -211,5 +169,31 @@ describe('fetchBackward', () => {
         { fetchPage: ex.fetchPage, now: longAfter },
       ),
     ).rejects.toThrow('to 형식이 다르다');
+  });
+});
+
+describe('mergeCandles', () => {
+  const c = (time: string, close = 1): Candle => ({
+    time,
+    open: 1,
+    high: 1,
+    low: 1,
+    close,
+    volume: 1,
+    quoteVolume: 1,
+  });
+
+  it('시각 기준으로 합치고 오름차순으로 정렬한다', () => {
+    const result = mergeCandles([c(hour(1)), c(hour(3))], [c(hour(4)), c(hour(0)), c(hour(2))]);
+    expect(result.candles.map((x) => x.time)).toEqual([0, 1, 2, 3, 4].map(hour));
+    expect(result.added).toBe(3);
+    expect(result.conflicts).toBe(0);
+  });
+
+  it('같은 시각은 기존 값을 유지하고, 값이 다르면 세기만 한다', () => {
+    const result = mergeCandles([c(hour(1), 10)], [c(hour(1), 10), c(hour(1), 99)]);
+    expect(result.candles).toEqual([c(hour(1), 10)]);
+    expect(result.added).toBe(0);
+    expect(result.conflicts).toBe(1);
   });
 });

@@ -81,6 +81,46 @@ export function isClosed(candle: Candle, requestTimeMs: number): boolean {
   return Date.parse(candle.time) + HOUR_MS <= requestTimeMs;
 }
 
+export interface MergeResult {
+  /** time 오름차순, 중복 없음 */
+  candles: Candle[];
+  /** 새로 들어간 캔들 수 */
+  added: number;
+  /** 같은 time인데 값이 다른 캔들 수 (기존 값을 유지함) */
+  conflicts: number;
+}
+
+function sameValues(a: Candle, b: Candle): boolean {
+  return (
+    a.open === b.open &&
+    a.high === b.high &&
+    a.low === b.low &&
+    a.close === b.close &&
+    a.volume === b.volume &&
+    a.quoteVolume === b.quoteVolume
+  );
+}
+
+/** 시각 기준으로 합친다. 같은 time이면 기존 캔들을 유지한다 (끝난 캔들은 바뀌지 않음, data-spec 2.5) */
+export function mergeCandles(existing: Candle[], incoming: Candle[]): MergeResult {
+  const byTime = new Map(existing.map((c) => [c.time, c]));
+  let added = 0;
+  let conflicts = 0;
+  for (const candle of incoming) {
+    const kept = byTime.get(candle.time);
+    if (kept === undefined) {
+      byTime.set(candle.time, candle);
+      added += 1;
+    } else if (!sameValues(kept, candle)) {
+      conflicts += 1;
+    }
+  }
+  const candles = [...byTime.values()].sort((a, b) =>
+    a.time < b.time ? -1 : a.time > b.time ? 1 : 0,
+  );
+  return { candles, added, conflicts };
+}
+
 export interface FetchBackwardOptions {
   /** 이 시각 이전(미포함)부터 받는다. 없으면 최신부터 */
   to?: string;
