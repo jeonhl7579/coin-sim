@@ -36,6 +36,16 @@ export default defineConfig({
           benchmark: { include: [] },
         },
       },
+      {
+        // scripts/: 수집기 (node). 커버리지 기준에는 넣지 않는다
+        extends: true,
+        test: {
+          name: 'scripts',
+          environment: 'node',
+          include: ['scripts/**/*.test.ts'],
+          benchmark: { include: [] },
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
