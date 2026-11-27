@@ -16,6 +16,15 @@ from analysis.market import beta, index_weights, leave_one_out, market_index
 from analysis.raw import INTERIM_DIR, RAW_DIR, candle_dir, list_markets, read_candles
 from analysis.regimes import STATES, centered_trend, label_regimes, runs, switch_ratios
 from analysis.segments import Segment, cut_segments, sample_pool, standardize_by_state
+from analysis.shocks import (
+    PropagationParams,
+    baseline_reactions,
+    detect_events,
+    make_grid,
+    propagation_stats,
+    react,
+    shock_summary,
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +49,16 @@ class StatsParams:
     min_group_coins: int = 3
     quantile_grid: tuple[float, ...] = (0.0, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 1.0)
     seed: int = 20261128
+    # 급등락 (D-73) [임시값]: 개별 고유 움직임 ±8%, 시장 지수 ±4%, 12시간 안은 같은 사건
+    shock_threshold: float = 0.08
+    market_shock_threshold: float = 0.04
+    event_cooldown_hours: int = 12
+    # 전파 (D-74) [임시값]: 평소 변동성 2배 이상이면 반응, 시차 0~3시간, 기준선 표본 3,000개
+    follow_z: float = 2.0
+    max_lag: int = 3
+    baseline_samples: int = 3000
+    alpha: float = 0.05
+    bootstrap: int = 200
 
 
 def quantiles(values: list[float] | np.ndarray, grid: tuple[float, ...]) -> dict:
@@ -56,6 +75,19 @@ class CoreStats:
 
     stats: dict
     report: dict = field(default_factory=dict)
+    context: "CoreContext | None" = None
+
+
+@dataclass
+class CoreContext:
+    """6.2b·6.2c가 이어서 쓰는 중간 값 (내보내지 않음)."""
+
+    market: pd.Series
+    labels: pd.Series
+    archetype_of: dict[str, str]
+    coin_beta: dict[str, float]
+    coin_std: dict[str, dict[str, float]]
+    idio: dict[str, pd.Series]
 
 
 def quote_volume_frame(
@@ -109,6 +141,7 @@ def build_core(
     coin_beta: dict[str, float] = {}
     coin_std: dict[str, dict[str, float]] = {}
     coin_segments: dict[str, dict[str, list[Segment]]] = {}
+    coin_idio: dict[str, pd.Series] = {}
     for m in used:
         loo = leave_one_out(market, returns[m], weights[m])
         b = beta(returns[m], loo)
@@ -116,6 +149,7 @@ def build_core(
         z, std = standardize_by_state(idio, labels)
         coin_beta[m] = b
         coin_std[m] = std
+        coin_idio[m] = idio
         coin_segments[m] = cut_segments(z, labels, params.segment_hours, m)
 
     archetypes: dict[str, dict] = {}
@@ -171,7 +205,120 @@ def build_core(
             for m in used
         },
     }
-    return CoreStats(stats, report)
+    context = CoreContext(market, labels, archetype_of, coin_beta, coin_std, coin_idio)
+    return CoreStats(stats, report, context)
+
+
+def build_shocks(context: CoreContext, params: StatsParams) -> tuple[dict, dict]:
+    """6.2b: 급등락 빈도·크기와 전파. (stats 조각, report) — stats는 data-spec 4.2 경로에 합친다."""
+    grid = params.quantile_grid
+    rng = np.random.default_rng(params.seed + 1)
+    market_events = detect_events(
+        context.market, params.market_shock_threshold, params.event_cooldown_hours
+    )
+    market_shock = shock_summary(market_events.tolist(), len(context.market), grid)
+
+    coin_events: dict[str, pd.Series] = {}
+    z: dict[str, pd.Series] = {}
+    for coin, idio in context.idio.items():
+        quiet = idio.drop(market_events.index, errors="ignore")
+        coin_events[coin] = detect_events(
+            quiet, params.shock_threshold, params.event_cooldown_hours
+        )
+        z[coin], _ = standardize_by_state(idio, context.labels)
+
+    shock_by_archetype: dict[str, dict] = {}
+    for archetype in ARCHETYPES:
+        members = [c for c, a in context.archetype_of.items() if a == archetype]
+        sizes = [v for c in members for v in coin_events[c].tolist()]
+        hours = sum(len(context.idio[c]) for c in members)
+        summary = shock_summary(sizes, hours, grid)
+        shock_by_archetype[archetype] = {
+            "relativeFrequency": summary["ratePer1000h"],
+            "upShare": summary["upShare"],
+            "up": summary["up"],
+            "down": summary["down"],
+        }
+
+    table = make_grid(context.idio, z, context.coin_beta)
+    pparams = PropagationParams(
+        params.follow_z, params.max_lag, params.baseline_samples, params.alpha, params.bootstrap
+    )
+    positions: dict[int, set[int]] = {}
+    reactions = []
+    for col, coin in enumerate(table.coins):
+        index = table.index.get_indexer(coin_events[coin].index)
+        positions[col] = {int(i) for i in index if i >= 0}
+        for pos, size in zip(index, coin_events[coin].tolist(), strict=True):
+            if pos < 0:
+                continue
+            r = react(
+                table, int(pos), col, float(np.sign(size)), size, params.follow_z, params.max_lag
+            )
+            if r.available >= pparams.min_available:
+                reactions.append(r)
+    baseline = baseline_reactions(table, positions, pparams, rng)
+    propagation, propagation_report = propagation_stats(
+        reactions, baseline, context.archetype_of, pparams, grid, rng
+    )
+
+    stats = {
+        "archetypeShock": shock_by_archetype,
+        "marketShock": market_shock,
+        "propagation": propagation,
+    }
+    report = {
+        "marketEvents": len(market_events),
+        "coinEvents": {c: len(e) for c, e in coin_events.items()},
+        "propagation": propagation_report,
+    }
+    return stats, report
+
+
+def merge_shocks(core_stats: dict, shock_stats: dict) -> dict:
+    """data-spec 4.2 경로로 합친다: archetypes.<a>.shock, marketShock, propagation."""
+    merged = json.loads(json.dumps(core_stats))
+    for archetype, shock in shock_stats["archetypeShock"].items():
+        merged["archetypes"][archetype]["shock"] = shock
+    merged["marketShock"] = shock_stats["marketShock"]
+    merged["propagation"] = shock_stats["propagation"]
+    return merged
+
+
+def print_shocks(stats: dict, report: dict) -> None:
+    ms = stats["marketShock"]
+    print(
+        f"[stats] 시장 이벤트 {report['marketEvents']}개 "
+        f"(1,000시간당 {ms['ratePer1000h']:.2f}, 상승 {ms['upShare']:.2f})"
+    )
+    for archetype, shock in stats["archetypeShock"].items():
+        up = shock["up"]["v"]
+        down = shock["down"]["v"]
+        print(
+            f"[stats]   {archetype:<7} 급등락 1,000시간당 {shock['relativeFrequency']:.2f} "
+            f"상승 {shock['upShare']:.2f} "
+            f"크기 중앙값 +{(up[4] if up else 0) * 100:.1f}% "
+            f"/ -{(down[4] if down else 0) * 100:.1f}%"
+        )
+    p = report["propagation"]
+    print(
+        f"[stats] 전파: 사건 {p['events']}개, 기준선 반응률 {p['baselineReactRate']:.3f}, "
+        f"오탐 {p['falsePositive']:.3f}, 전파된 사건 {p.get('propagatedEvents', 0)}"
+    )
+    for archetype, row in p["probability"].items():
+        print(
+            f"[stats]   {archetype:<7} 사건 {row['events']:>4} 전파 확률 {row['estimate']:+.3f} "
+            f"구간 [{row['ci'][0]:+.3f}, {row['ci'][1]:+.3f}] "
+            f"{'구분됨' if row['distinguished'] else '구분 안 됨 → config'}"
+        )
+    prop = stats["propagation"]
+    for key in ("delay", "opposite"):
+        if key in prop:
+            print(f"[stats]   {key}: {prop[key]}")
+    for key in ("scope", "strength"):
+        if key in prop:
+            print(f"[stats]   {key} 중앙값 {prop[key]['v'][4]:.3f}")
+    print(f"[stats]   config로 넘김: {p['toConfig']}")
 
 
 def print_report(core: CoreStats) -> None:
@@ -203,13 +350,18 @@ def main() -> None:
     markets = list_markets(RAW_DIR)
     frames = {m: read_candles(candle_dir(RAW_DIR) / f"{m}.csv") for m in markets}
     summary = clean_all(frames, CleanParams())
-    core = build_core(summary, frames, StatsParams())
+    params = StatsParams()
+    core = build_core(summary, frames, params)
+    if core.context is None:
+        raise RuntimeError("build_core가 중간 값을 돌려주지 않았다")
+    shock_stats, shock_report = build_shocks(core.context, params)
+    stats = merge_shocks(core.stats, shock_stats)
     INTERIM_DIR.mkdir(parents=True, exist_ok=True)
     path = INTERIM_DIR / "stats_preview.json"
-    path.write_text(
-        json.dumps({"stats": core.stats, "report": core.report}, ensure_ascii=False) + "\n"
-    )
+    report = {**core.report, "shocks": shock_report}
+    path.write_text(json.dumps({"stats": stats, "report": report}, ensure_ascii=False) + "\n")
     print_report(core)
+    print_shocks(shock_stats, shock_report)
     print(f"[stats] → data/interim/{path.name} ({path.stat().st_size / 1e6:.1f}MB)")
 
 
