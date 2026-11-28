@@ -3,6 +3,8 @@ dist
 coverage
 package-lock.json
 data
+# analysis/export.py가 만드는 고정 통계 (손으로 고치지 않음)
+tests/fixtures/*.json
 
 # 기획·개발 문서 (한국어 표가 다시 정렬되지 않게)
 docs

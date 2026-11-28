@@ -3,7 +3,7 @@
 CLAUDE.md의 핵심 규칙을 보충하는 세부 기준이다. 충돌하면 CLAUDE.md를 먼저 고친다.
 
 - 작성일: 2026-11-18
-- 수정: 2026-11-23 (0단계 결정 D-22~D-43 반영: 1장, 2장, 3장, 4장, 7장, 11장)
+- 수정: 2026-11-23 (0단계 결정 D-22~D-43 반영: 1장, 2장, 3장, 4장, 7장, 11장), 2026-11-28 (2번 작업 D-55~D-80 반영: 1장, 2장, 7장, 9장)
 
 ---
 
@@ -14,7 +14,7 @@ CLAUDE.md의 핵심 규칙을 보충하는 세부 기준이다. 충돌하면 CLA
 | Node | 24 LTS. `.nvmrc`에 정확한 버전(`24.22.3`)을 적고 로컬·CI가 같이 쓴다 (`nvm use`). 패키지 매니저는 그 Node에 포함된 npm, `package-lock.json` 커밋. 다른 npm 버전으로 lock을 만들지 않는다 (D-51). Node를 올릴 때는 `.nvmrc`를 바꾸고 lock을 다시 만든다 |
 | Python | 3.12 이상, uv로 관리. `.python-version`(3.12)으로 고정하고 uv가 받는다. `pyproject.toml`과 `uv.lock` 커밋. 개발 도구(ruff, pytest)는 정확한 버전으로 고정 |
 | 경로 별칭 | `@/` → `src/`, `@tests/` → `tests/` (테스트 파일에서만) |
-| 데이터 | `data/raw/`는 gitignore, `data/stats/`는 커밋 |
+| 데이터 | `data/raw/`(원본)와 `data/interim/`(분석 중간 산출물)은 gitignore. `data/stats/stats.json`과 `tests/fixtures/stats.small.json`은 `npm run stats`가 만들고 커밋한다 (손으로 고치지 않음). 원본은 저장소 밖에 백업한다 (D-56, data-spec 1·7장) |
 | 환경 변수 | `.env`는 gitignore, `.env.example` 커밋. 처음 한 번 `cp .env.example .env` (`.env`가 없으면 `--env-file`이 실패한다, D-46). Node는 `tsx --env-file`, Python은 `uv run --env-file`로 불러오고 dotenv 라이브러리는 쓰지 않음 |
 
 ## 2. 코드 컨벤션
@@ -26,7 +26,7 @@ CLAUDE.md의 핵심 규칙을 보충하는 세부 기준이다. 충돌하면 CLA
 | 폴더 | `components/`는 화면별(`game/`, `result/`, `records/`) + 두 화면 이상에서 쓰는 `common/`. `pages/`는 라우트당 1개 (D-30) |
 | 타입 | `any` 금지. 타입은 그 타입을 만드는 모듈 안에 둔다: `engine/types.ts`, `game/types.ts`, props 타입은 컴포넌트 파일 안. 전역 `src/types/`를 만들지 않는다. 통계 JSON 타입과 `SCHEMA_VERSION`은 `src/engine/` 안의 한 파일에 둔다 (D-31) |
 | 타입 패턴 | 상태 구분은 판별 유니온(예: 시계 `ready·playing·paused·eventPending·ended`)으로 쓰고 `switch`에서 모든 경우를 처리한다. 주문 거부처럼 실패할 수 있는 game 함수는 `{ ok: true, … } \| { ok: false, reason }`을 반환하고, 거부 이유 문구는 UI가 정한다. 설정값은 `as const satisfies` |
-| 설정값 | 템포(캔들 수, 캔들당 시간, 세부 단계 수, 과거 캔들 수 100, 선택지를 띄우지 않는 마지막 캔들 수 10), 수수료, 최소 주문 금액, 등급 기준, 이벤트 횟수·최소 간격, 전파 결과 확률(통계로 구하지 못할 때의 임시값), 폭락형 등장 확률·대체 자리 비율, 같은 캔들 여러 이벤트 처리 방식(A·B)은 `src/config/`에 둔다 |
+| 설정값 | 템포(캔들 수, 캔들당 시간, 세부 단계 수, 과거 캔들 수 100, 선택지를 띄우지 않는 마지막 캔들 수 10), 수수료, 최소 주문 금액, 등급 기준, 이벤트 횟수·최소 간격, 전파 값 중 통계에 없는 것(영향 없음 확률 등, D-75), 이벤트 종류별 전파 가중치, 폭락형 등장 확률·대체 자리 비율, 폭락 시작 시점·막판 반등 확률(D-72), 게임의 시장 상태 목표 비율(D-68), 시작 가격·거래량 기준값·비례 계수(D-63), 같은 캔들 여러 이벤트 처리 방식(A·B)은 `src/config/`에 둔다 |
 | 계층 import (D-23) | 값 import는 바로 아래 계층만: `pages → components → store → game → engine → config` (`pages → store` 허용, `game → config` 허용). `import type`은 아래 방향이면 건너뛸 수 있다. 위 방향은 타입도 금지 |
 | ESLint 강제 (`eslint.config.js`, D-40) | 위 계층 import 규칙(`@typescript-eslint/no-restricted-imports`, 폴더별 설정, 건너뛰기는 `allowTypeImports`) / 폴더 밖은 `@/`로만 import (`../` 금지) / `@tests/`는 테스트 파일에서만 / `src/engine`·`src/game`·`src/config`에서 react·react-dom·zustand·react-router, `Math.random`, `Date.now`, 인자 없는 `new Date()`·`Date()`, `window`, `document` 금지 / `localStorage`는 `store/recordsStorage.ts`에서만, `sessionStorage`는 `main.tsx`에서만 (`window.`·`globalThis.` 형태 포함) / `Math.round·floor·ceil·trunc`는 `src/engine`과 `game/money.ts` 밖에서 금지 (D-33) / `dangerouslySetInnerHTML`, default export 금지 / `src/**/index.ts(x)`는 파일 자체가 오류 (D-35) / `switch-exhaustiveness-check`, `no-floating-promises`, `consistent-type-imports` / react-hooks recommended. 기본 세트는 `recommendedTypeChecked` (D-41) |
 | ESLint가 못 막는 것 | 동적 `import()`는 계층 규칙 검사 대상이 아니다. `loadStats()` 밖의 동적 import는 리뷰로 막는다 (후속: 2번 작업에서 `loadStats` 파일이 생기면 그 밖의 `import()`를 금지하는 규칙 추가) |
@@ -129,13 +129,15 @@ store 타이머(requestAnimationFrame) → 경과 시간
 | `game/scoring` | 등급 경계 +30%, +15%, +5%, −5% / 최대 낙폭 / 끝까지 보유했을 때와 비교 / 종료할 때 지정가 자동 취소와 현금 반환 |
 | `game/records` | 기록에 시드와 통계 `schemaVersion` 포함 / 형식이 깨진 항목은 건너뛰고 나머지는 읽음 |
 | UI (Testing Library) | 주문 버튼 비활성화와 이유 표시 / 모달에서 선택하면 재개 / 접은 상태에서 [재생] 누르면 다시 펼침 / 게임 중 뒤로 가기 → S-04b / 차트가 언마운트되면 store 구독 해제 |
-| `analysis` (pytest) | 변동성을 알고 있는 합성 데이터로 통계 함수 정확도 |
+| `analysis` (pytest) | 값을 알고 있는 합성 데이터로 통계 함수 정확도 (β, 상태, 조각 경계) / 전파·폭락을 심은 합성 데이터에서 심은 값을 되찾음 / 가공 기준 검사마다 실패하는 경우 / 같은 입력이면 같은 바이트 / 실제 이름 해시 고정 예시 |
+| `scripts/collect` | 페이지 나누기와 종료 조건, 무한 반복 방지, 시각 기준 중복 제거, 이어 받기, 깨진 CSV 보호, 속도 제한·재시도(가짜 시계), Origin 헤더 없음(로컬 서버), 빈 구간 보고서 |
+| `engine/statsSchema` | fixture가 `StatsFile` 타입을 통과(typecheck), `schemaVersion`, 분위수 격자, 조각 길이 |
 
 ### 기준
 - 커버리지: `src/engine`, `src/game` 라인 90% 이상 **[임시값]**. UI에는 기준을 두지 않는다.
 - 통계를 쓰는 테스트는 `tests/fixtures/`의 작은 고정 통계 JSON만 쓴다.
 - 테스트 파일은 대상 파일 옆에 둔다(`orders.ts` ↔ `orders.test.ts`, `OrderPanel.tsx` ↔ `OrderPanel.test.tsx`). `tests/`에는 fixtures와 공용 `setup.ts`만 둔다 (D-32).
-- Vitest 프로젝트 두 개 (`vite.config.ts`, D-43): `core`는 `src/{engine,game,config}`의 테스트를 node 환경에서, `ui`는 나머지를 jsdom 환경에서 `tests/setup.ts`(jest-dom, 렌더링 정리, store 초기화)와 함께 돌린다. 전역 함수(`describe` 등)는 쓰지 않고 `vitest`에서 import한다.
+- Vitest 프로젝트 세 개 (`vite.config.ts`, D-43): `core`는 `src/{engine,game,config}`의 테스트를 node 환경에서, `scripts`는 `scripts/**`의 테스트를 node 환경에서(커버리지 기준 밖), `ui`는 나머지를 jsdom 환경에서 `tests/setup.ts`(jest-dom, 렌더링 정리, store 초기화)와 함께 돌린다. 전역 함수(`describe` 등)는 쓰지 않고 `vitest`에서 import한다.
 - 벤치마크는 `*.bench.ts`를 대상 파일 옆에 두고 `core` 프로젝트에서만 돈다.
 - Python 테스트도 대상 파일 옆에 둔다(`analysis/returns.py` ↔ `analysis/test_returns.py`) (D-45).
 
@@ -150,9 +152,10 @@ store 타이머(requestAnimationFrame) → 경과 시간
 
 ## 9. 데이터 무결성
 
-- 통계 JSON에는 `schemaVersion`과 메타데이터(출처, 수집 기간, 생성 시각)를 넣는다. `uv.lock`으로 고정한 환경에서 한 명령으로 다시 만들 수 있어야 한다.
+- 통계 JSON에는 `schemaVersion`과 메타데이터(출처, 사용한 원본의 기간 `dataFrom`·`dataUntil`, 분석 조건)를 넣는다. 실행 시각은 넣지 않는다. `uv.lock`으로 고정한 환경에서 `npm run stats` 한 명령으로 다시 만들고, 같은 원본이면 바이트 단위로 같아야 한다 (D-62, D-80).
+- 게임용 통계는 가공 기준(data-spec 4.3)을 통과한 값만 내보낸다. 어기면 `npm run stats`가 파일을 쓰지 않고 실패한다 (D-56, D-80).
 - 수집은 시각 기준으로 중복을 제거한다. 이어 받기를 몇 번 다시 해도 결과가 같아야 한다. 빈 구간은 보고서로 출력한다.
-- `data/raw/` 컬럼: 시각(UTC), 시가, 고가, 저가, 종가, 거래량, 거래대금. 출처가 바뀌어도 이 형식을 유지한다.
+- `data/raw/` 컬럼: 시각(UTC), 시가, 고가, 저가, 종가, 거래량, 거래대금 (`time,open,high,low,close,volume,quote_volume`, D-58). 출처가 바뀌어도 이 형식을 유지한다.
 - 업비트 API 요청 제한을 지키고, 요청 헤더와 키를 로그에 남기지 않는다.
 
 ## 10. 보안

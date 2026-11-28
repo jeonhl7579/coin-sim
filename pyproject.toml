@@ -3,7 +3,10 @@ name = "coin-sim-analysis"
 version = "0.0.0"
 description = "Coin Sim 통계 추출과 현실감 검증 리포트 (analysis/)"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.5",
+    "pandas>=3.1.1",
+]
 
 [dependency-groups]
 dev = [
@@ -20,8 +23,8 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-# pandas(PD)·numpy(NPY) 규칙은 2번 작업에서 추가한다
-select = ["E", "F", "I", "UP", "B"]
+# pandas(PD)·numpy(NPY) 규칙 포함 (D-45, 2번 작업 6.1)
+select = ["E", "F", "I", "UP", "B", "PD", "NPY"]
 
 [tool.pytest.ini_options]
 testpaths = ["analysis"]

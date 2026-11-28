@@ -3,7 +3,7 @@
 세션을 시작할 때 먼저 읽는 인계 문서다. **상태만** 적는다. 결정과 근거는 [decisions.md](decisions.md), 플레이테스트 결과는 [PLAYTEST.md](../PLAYTEST.md), 데이터 형식은 [data-spec.md](data-spec.md)에 두고 여기서는 링크만 한다.
 
 - 형식: 로컬 `prompts/stage_dev_prompt.md`의 "인계 문서" (`prompts/`는 git에서 제외, 로컬과 저장소 밖 백업에만 있음)
-- 마지막 갱신: 2026-11-28 (2번 작업 4·5단계: 수집기, 시범 수집)
+- 마지막 갱신: 2026-11-28 (2번 작업 마무리)
 
 ---
 
@@ -12,8 +12,8 @@
 | 단계 | 상태 | 작업 프롬프트 | 비고 |
 |---|---|---|---|
 | 0. 프로젝트 셋업 | 완료 (2026-11-24, `v0.0`) | `prompts/setup_prompt.md` | 결정 D-22~D-54. 릴리스 PR #3 |
-| 1. 데이터 수집 | 진행 중 | `prompts/data_pipeline_prompt.md` | 수집기·시범 수집(10개) 완료. 전체 수집은 2번 작업 8단계 |
-| 2. 통계 추출 | 대기 | 같음 | 통계 JSON 스키마 v1 |
+| 1. 데이터 수집 | 완료 (원본 로컬) | `prompts/data_pipeline_prompt.md` | 전체 302개 수집 완료(2026-11-27, 요청 37,102건, 1시간 18분, 560MB). 백업: `~/projects/coin-sim-data-backup/raw-2026-11-28/` (체크섬 확인) |
+| 2. 통계 추출 | 완료 | 같음 | 통계 JSON 스키마 v1 (`data/stats/stats.json`) |
 | 3. 생성 엔진 | 대기 | `prompts/stage_dev_prompt.md` | 2단계 스키마 v1 이후 |
 | 4~8 | 대기 | 같음 | |
 
@@ -40,50 +40,36 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 | 3. 데이터 명세 초안 | 완료 | [data-spec.md](data-spec.md) 초안, D-57~D-63 |
 | 4. 수집기 개발 | 완료 | `scripts/collect.ts`, `scripts/collect/`. 마켓 목록 → 나눠 받기·요청 제한(초당 8회, 429·418·5xx 처리) → CSV 저장·이어 받기·중복 제거 → 빈 구간 보고서. data-spec 2장 |
 | 5. 시범 수집 (10개) | 완료 | 캔들 48만 8,990개, 요청 1,652건, 3분 28초. 끊고 다시 실행해서 이어 받기, 다시 실행해도 같은 파일 확인. 결과는 [data-spec.md](data-spec.md) 부록 A |
-| 6. 통계 추출 | 대기 | |
-| 7. 스키마 v1 확정과 내보내기 | 대기 | |
-| 8. 전체 수집 (백그라운드) | 대기 | |
-| 9. 마무리 | 대기 | |
+| 6. 통계 추출 | 완료 | 6.1 정제 완료(`analysis/clean.py`, D-64~D-67). 시범 10개 중 8개 사용(HAEDAL 기간 부족, USDT 스테이블코인). 6.2a 시장 지수·상태·β·변동성·조각·성격 완료(`analysis/stats.py` 등, D-68~D-72). 6.2b 급등락·전파 완료(`analysis/shocks.py`, D-73~D-75). 정제에 호가 단위 잡음 규칙 추가(D-76). 6.2c 폭락형·캔들 꼬리 완료(`analysis/crash.py`, D-77·D-78). 전체 데이터로 기준값 조정(D-79): 사용 239개 |
+| 7. 스키마 v1 확정과 내보내기 | 완료 | `npm run stats` → `data/stats/stats.json`(gzip 1.15MB, 사용 239개), fixture, `src/engine/statsSchema.ts`(D-80). data-spec v1 확정 |
+| 8. 전체 수집 (백그라운드) | 완료 (앞당겨 실행) | 302개 모두 성공, 캔들 7,878,151개. 성격 그룹 최소 3개를 채우려고 6.2a 뒤에 실행 |
+| 9. 마무리 | 완료 | 기획 문서 수정 목록 반영, 후속 작업 정리, `prompts/README.md` 회고 |
 
 ## 열린 질문과 결정 대기
 
 | 항목 | 언제까지 | 기준 |
 |---|---|---|
-| 스테이블코인 제외 기준, 최소 거래대금 기준값 | 2번 작업 6.1 | [data-spec.md](data-spec.md) 4.4 |
-| 거래소 전체 공백(56구간, 128시간)을 수익률 계산에서 어떻게 다룰지, 2017-10-24 전 데이터(일부 코인 82시간 공백)를 쓸지 | 2번 작업 6.1 | data-spec 부록 A "시범 수집 결과" |
-| 상태 구분 방법, 수익률 조각 길이, 시장 전체 흐름을 만드는 방법, 성격 분류 기준, 폭락형 수치의 출처 | 2번 작업 6.3 | data-spec 4.2 [분석 후 결정] |
-| 가공 기준의 그룹당 최소 코인 수 N, 분위수 격자, 숫자 자릿수 | 2번 작업 6~7 | data-spec 4.1, 4.3 |
+| 남은 [임시값]은 현실감 검증 리포트(4단계)와 플레이테스트에서 다시 확인: 상태 ±11%, 조각 12~36시간, 급등락 ±8%/±4%, 폭락 −50%, 성격 구간 비율, 숫자 4자리 | 4단계 | [data-spec.md](data-spec.md) 3.1·4.2, D-79, D-80 |
+| 업비트 약관의 2023-10 이후 개정 여부 (upbit.com 약관 페이지를 도구로 읽지 못함, 브라우저로 확인) | 8단계(배포) 전 | data-spec 부록 A, NFR-11 |
 | OVERVIEW 8장 #11~14 (지연 전파 처리) | 3단계 전 | [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) 8장 |
 | OVERVIEW 8장 #15 (현재가보다 불리한 지정가) | 5단계 전 | 같음 |
 | 단계마다 시작 전에 정할 것 | 각 단계 시작 | stage_dev_prompt.md "단계 카드" |
 
-### 기획 문서 수정 목록 (2번 작업 마무리에서 승인받고 고침)
-
-| 문서 | 고칠 내용 | 근거 |
-|---|---|---|
-| OVERVIEW 4장 "예상 규모" | 코인 수 302(계속 바뀜), 요청당 200 확인, 코인당 최대 약 8만(2017-09-25부터). 수집 시간·용량 상한 약 4.2시간·1.8GB(초당 7.9건, 행당 약 74바이트). 정확한 값은 전체 수집 뒤 | data-spec 부록 A |
-| OVERVIEW 4장 "데이터 주의점" | 상장 폐지 코인 받을 수 없음, 캔들 누락, 시가총액·섹터 없음에서 [추측] 삭제. 스테이블코인 제외 추가. 보관 층(원본·중간은 로컬, 가공한 통계만 배포) | 부록 A, D-56 |
-| OVERVIEW 6장 폴더 구조 | `data/interim/` 추가 | D-56 |
-| OVERVIEW 9장, REQUIREMENTS NFR-11 | 확인 결과와 약관 판단 반영 | 부록 A |
-| conventions 1장 데이터 | `data/interim/` 제외 규칙 | D-56 |
-| conventions 2장 설정값 | 시작 가격 범위, 거래량 기준값·비례 계수, 이벤트 종류별 전파 가중치 추가 | D-63, data-spec 4.2 |
-| conventions 9장 | "생성 시각" → 원본 기간(`dataFrom`, `dataUntil`). 원본 CSV 컬럼 이름 | D-58, D-62 |
-| PLAYTEST | 시작 가격·거래량 임시값 항목 추가 검토 | D-63 |
-| CLAUDE.md | 구조의 `data/` 설명, 실제 이름 해시 계약(NFR-12) 한 줄 | D-56, D-61 |
+기획 문서 수정 목록(2번 작업)은 2026-11-28에 모두 반영했다: OVERVIEW 3·4·6·7·9장, REQUIREMENTS NFR-11, FEATURES F-02·F-03·2장, PLAYTEST PT-13·15·16·17, conventions 1·2·7·9장, CLAUDE.md. 각 문서 변경 이력에 기록.
 
 ## 후속 작업 (지금 단계 범위 밖이라 하지 않은 일)
 
 | 언제 | 할 일 | 관련 |
 |---|---|---|
-| 2번 작업 6단계 | pandas·numpy 추가, ruff `PD`·`NPY` 규칙 추가 | D-45 |
-| 2번 작업 7단계 | fixtures·통계 파일을 넣으면 `tests/fixtures/.gitkeep`, `data/stats/.gitkeep` 삭제 | |
-| 2번 작업 7단계, 7단계 | 런타임 검증 라이브러리(zod 등)를 쓸지 판단 (통계 JSON, 기록) | |
-| 2번 작업 8단계 뒤 | 전체 원본(`data/raw/`)을 저장소 밖에 백업 (상장 폐지 코인은 다시 받을 수 없음) | data-spec 1장 |
-| 3단계 | `loadStats()`와, 그 파일 밖의 동적 `import()`를 금지하는 ESLint 규칙 (2번 작업에서 넘김, 2026-11-26) | conventions 2장 |
-| 3단계 | 실제 이름 해시로 가상 코인 이름 거르기 (data-spec 5장 계약) | D-61 |
+| 3단계 | `loadStats()`(동적 `import()`, `schemaVersion` 검사)와, 그 파일 밖의 동적 `import()`를 금지하는 ESLint 규칙 (2번 작업에서 넘김) | conventions 2장, D-80 |
+| 3단계 | 실제 이름 해시 TS 구현으로 가상 코인 이름 거르기. data-spec 5장 고정 예시 4개를 TS 테스트로 맞춘다 | D-61 |
+| 3단계 | config [임시값]: 상태 목표 비율(PT-15), 시작 가격·거래량(PT-16), 이벤트 종류별 전파 가중치, 영향 없음 확률(PT-13), 폭락 시작 시점·막판 반등 확률(PT-17) | conventions 2장 |
+| 3단계, 7단계 | 런타임 검증: 통계 JSON은 쓰지 않기로 함. `loadStats()`에서 깊은 검증이 필요한지, 기록(localStorage) 검증을 어떻게 할지 | D-80 |
+| 4단계 | 현실감 검증 리포트는 성격 그룹 단위로만 싣는다 (가공 기준). 상관관계는 리포트가 로컬 원본에서 계산 | data-spec 4.2·4.3 |
 | 3·5단계 | fast-check, @testing-library/user-event 설치 (쓰는 단계에서) | |
 | 5단계 | `vite:preloadError` 처리 (S-03) | conventions 5장, D-06 |
 | 8단계 | ErrorPage 문구 다듬기 (지금은 임시 문구) | D-34 |
+| 자동화하려면 | 로컬 스케줄러(launchd/cron)로 `npm run collect && npm run stats`. 통계 값이 바뀌면 엔진 스냅샷이 바뀌므로 PR로 반영. 원본 백업도 주기적으로 갱신. CI에서 돌리려면 CLAUDE.md "수집·분석을 CI에서 실행하지 않는다"를 고치고 원본(560MB, 비공개)을 둘 곳이 필요 | data-spec 7장 |
 | 프로젝트를 마친 뒤 업데이트 | 서버에서 시세 생성으로 구조 변경 검토 (통계를 브라우저에 보내지 않음). CLAUDE.md·OVERVIEW 원칙 변경 필요 | D-56 |
 | 게임 확장·수집 확대 때 | 시가총액·섹터용 외부 API 검토 | D-57 |
 | 언제든 | typescript-eslint가 TypeScript 7을 지원하면 올리기 | D-36 |
@@ -96,5 +82,6 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 
 ## 다음 세션이 먼저 할 일
 
-1. `dev/feat/data-collect` PR이 `qa`에 병합됐는지 확인한다.
-2. `prompts/data_pipeline_prompt.md`의 6단계(통계 추출)를 `qa`에서 분기한 `dev/feat/data-stats`에서 시작한다. 시범 수집 원본은 로컬 `data/raw/`에 있다(다른 컴퓨터면 `npm run collect -- --markets …`로 다시 받는다).
+1. `dev/feat/data-stats` PR이 `qa`에 병합됐는지 확인한다. 2번 작업(1·2단계)은 이것으로 끝난다.
+2. `prompts/stage_dev_prompt.md`로 3단계(생성 엔진)를 시작한다(`이번 단계: 3`). 계약은 [data-spec.md](data-spec.md) 4·5장과 `src/engine/statsSchema.ts`, 테스트용 통계는 `tests/fixtures/stats.small.json`이다. 시작 전에 OVERVIEW 8장 #11~14를 정한다.
+3. 원본이 필요하면 로컬 `data/raw/` 또는 백업 `~/projects/coin-sim-data-backup/raw-2026-11-28/`을 쓴다 (다른 컴퓨터면 백업을 복사한 뒤 `npm run collect`).
