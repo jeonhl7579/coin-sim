@@ -46,7 +46,7 @@ npm run build          # 프로덕션 빌드 (타입 검사는 typecheck로 따�
 npm run preview        # 빌드 결과 미리보기
 npm run lint           # ESLint (계층 import·재현성·반올림·localStorage 규칙 포함)
 npm run typecheck      # tsc -p로 tsconfig 3개 검사 (src 전체, DOM 없는 engine·game·config, Node 파일)
-npm run test           # Vitest (core: node, ui: jsdom)
+npm run test           # Vitest (core: node, ui: jsdom, scripts: node)
 npm run test:coverage  # 커버리지 (engine·game 라인 90%)
 npm run bench          # 시세 생성·틱 처리 벤치마크
 npm run format         # Prettier로 고치기
@@ -64,8 +64,8 @@ uv run --env-file .env python -m analysis.<모듈>
 ## 구조와 모듈 경계
 
 ```
-scripts/collect.ts   업비트 캔들 수집 → data/raw/ (gitignore)
-analysis/            Python 통계 추출 → data/stats/*.json (커밋), 검증 리포트
+scripts/collect.ts   업비트 캔들 수집 → data/raw/ (gitignore). 로직은 scripts/collect/
+analysis/            Python 정제·통계 → data/stats/stats.json (커밋, npm run stats), 검증 리포트. 중간 산출물은 data/interim/ (gitignore)
 src/main.tsx, src/router.tsx   진입점, createBrowserRouter와 루트 errorElement
 src/config/          템포·수수료·등급·이벤트 설정값 (engine·game이 함께 import)
 src/engine/          통계 + 시드 → GameWorld 생성, feed, loadStats(). 순수 TS
@@ -73,7 +73,7 @@ src/game/            시계, 주문, 포트폴리오, 이벤트 판정, 결과, 
 src/store/           Zustand gameStore 하나(game을 React에 연결, 타이머), recordsStorage.ts(localStorage)
 src/components/      화면별 폴더(game/, result/, records/) + common/. 그리기와 입력
 src/pages/           라우트당 1개(MainPage, PlayPage, ResultPage, RecordsPage). loader, useBlocker
-tests/               fixtures/(작은 고정 통계 JSON), setup.ts. 테스트 파일은 대상 파일 옆에 둔다
+tests/               fixtures/(stats.small.json, npm run stats가 만듦), setup.ts. 테스트 파일은 대상 파일 옆에 둔다
 ```
 
 - 패턴은 MVVM을 참고한다: Model = `engine`·`game`, Repository = `loadStats()`·`recordsStorage.ts`, ViewModel = `store`, View = `components`·`pages`. 근거: decisions.md D-22.
@@ -104,7 +104,7 @@ tests/               fixtures/(작은 고정 통계 JSON), setup.ts. 테스트 �
 - 뉴스와 저장된 기록은 텍스트로만 렌더링한다. `dangerouslySetInnerHTML`을 쓰지 않는다.
 - localStorage 키에 버전을 붙인다(`coin-sim:records:v1`). 읽을 때 형식을 검증하고 깨진 항목은 건너뛴다.
 - 기록에는 시드와 통계 `schemaVersion`을 함께 저장한다.
-- 가상 코인 이름과 티커는 실제 코인(수집한 마켓 목록)과 겹치지 않게 한다.
+- 가상 코인 이름과 티커는 실제 코인(수집한 마켓 목록)과 겹치지 않게 한다. `stats.json`의 `realNames` 해시로 거른다 (data-spec 5장).
 
 ## 비밀 정보
 
