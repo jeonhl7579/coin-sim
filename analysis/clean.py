@@ -26,11 +26,12 @@ class CleanParams:
     start: str = "2017-10-23T15:00:00Z"
     # 6개월 = 4,380시간 (F-02)
     min_returns: int = 4380
-    # [임시값] 스테이블코인: 연환산 변동성 < 30% 이고 종가 범위(상위 1% ÷ 하위 1%) < 1.5
-    stable_max_annual_vol: float = 0.30
-    stable_max_price_range: float = 1.5
-    # [임시값] 일 거래대금 중앙값(UTC 날짜 기준, 원)
-    min_daily_quote_volume: float = 1e8
+    # [임시값] 가격 고정형 자산(스테이블코인·실물 연동, D-79): 연환산 변동성 < 30% 또는
+    # 종가 범위(상위 1% ÷ 하위 1%) < 1.5. 거래가 얇은 스테이블코인은 변동성이 튀어도 범위가 작다
+    pegged_max_annual_vol: float = 0.30
+    pegged_max_price_range: float = 1.5
+    # [임시값] 일 거래대금 중앙값(UTC 날짜 기준, 원). 전체 데이터에서 하위 3개가 걸림 (D-79)
+    min_daily_quote_volume: float = 3e8
     # [임시값] 첫~마지막 캔들 사이 빈 시간 비율
     max_missing_ratio: float = 0.05
     # [임시값] 호가 단위 잡음 (D-76): 그 달(UTC)의 0이 아닌 1시간 수익률 중 가장 작은 값이 이 값
@@ -42,7 +43,7 @@ class CleanParams:
 EXCLUDE_REASONS = (
     "invalidFormat",
     "minPeriod",
-    "stablecoin",
+    "pegged",
     "minQuoteVolume",
     "maxMissingRatio",
 )
@@ -137,10 +138,10 @@ def clean_market(market: str, candles: pd.DataFrame, params: CleanParams) -> Cle
     if len(returns) < params.min_returns:
         return excluded("minPeriod")
     if (
-        annual_volatility(returns) < params.stable_max_annual_vol
-        and price_range(candles) < params.stable_max_price_range
+        annual_volatility(returns) < params.pegged_max_annual_vol
+        or price_range(candles) < params.pegged_max_price_range
     ):
-        return excluded("stablecoin")
+        return excluded("pegged")
     if daily_quote_volume_median(candles) < params.min_daily_quote_volume:
         return excluded("minQuoteVolume")
     if missing_ratio(candles) > params.max_missing_ratio:

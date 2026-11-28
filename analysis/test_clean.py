@@ -46,7 +46,15 @@ def make_candles(
 
 
 # 기준을 작게 줄인 매개변수 (최소 기간 10시간)
-SMALL = replace(CleanParams(), start="2000-01-01T00:00:00Z", min_returns=10)
+SMALL = replace(
+    CleanParams(),
+    start="2000-01-01T00:00:00Z",
+    min_returns=10,
+    # 짧은 합성 시계열은 가격 범위가 작아 가격 고정형으로 걸리므로 일반 테스트에서는 끈다
+    pegged_max_annual_vol=0.0,
+    pegged_max_price_range=0.0,
+)
+PEGGED = replace(SMALL, pegged_max_annual_vol=0.30, pegged_max_price_range=1.5)
 
 
 def volatile_closes(n: int, step: float = 0.02) -> np.ndarray:
@@ -125,20 +133,30 @@ class TestCleanMarket:
             == "minPeriod"
         )
 
-    def test_변동성도_가격_범위도_작으면_스테이블코인(self) -> None:
+    def test_변동성도_가격_범위도_작으면_가격_고정형(self) -> None:
         stable = make_candles(volatile_closes(200, step=0.001))
-        assert clean_market("KRW-AAA", stable, SMALL).excluded == "stablecoin"
+        assert clean_market("KRW-AAA", stable, PEGGED).excluded == "pegged"
 
-    def test_변동성이_작아도_가격이_크게_움직이면_스테이블코인_아님(self) -> None:
-        # 시간당 +0.1%씩 꾸준히 오름: 변동성 0, 가격 범위 큼
+    def test_변동성이_커도_가격_범위가_작으면_가격_고정형(self) -> None:
+        # 거래가 얇은 스테이블코인: ±2%씩 튀지만 같은 자리로 돌아옴
+        noisy = make_candles(volatile_closes(200, step=0.02))
+        assert clean_market("KRW-AAA", noisy, PEGGED).excluded == "pegged"
+
+    def test_변동성이_작으면_가격이_움직여도_가격_고정형(self) -> None:
+        # 실물 연동: 시간당 +0.1%씩 꾸준히 오름 (변동성 0, 가격 범위 큼)
         drifting = make_candles(trending_closes(1000, step=0.001))
-        assert clean_market("KRW-AAA", drifting, SMALL).excluded is None
+        assert clean_market("KRW-AAA", drifting, PEGGED).excluded == "pegged"
+
+    def test_변동성도_가격_범위도_크면_통과(self) -> None:
+        closes = volatile_closes(2000, step=0.02) * trending_closes(2000, step=0.001) / 100
+        assert clean_market("KRW-AAA", make_candles(closes), PEGGED).excluded is None
 
     def test_거래대금_경계(self) -> None:
         closes = volatile_closes(48)
         # 하루 24시간 × 시간당 거래대금
-        ok = make_candles(closes, quote_volume=1e8 / 24)
-        low = make_candles(closes, quote_volume=1e8 / 24 * 0.99)
+        limit = SMALL.min_daily_quote_volume
+        ok = make_candles(closes, quote_volume=limit / 24)
+        low = make_candles(closes, quote_volume=limit / 24 * 0.99)
         assert clean_market("KRW-AAA", ok, SMALL).excluded is None
         assert clean_market("KRW-AAA", low, SMALL).excluded == "minQuoteVolume"
 
@@ -185,12 +203,12 @@ def test_clean_all_이유별_제외_수와_사용_목록() -> None:
         "KRW-AAA": make_candles(volatile_closes(30)),
         "KRW-CCC": make_candles(volatile_closes(200, step=0.001)),
     }
-    summary = clean_all(frames, SMALL)
+    summary = clean_all(frames, replace(SMALL, pegged_max_annual_vol=0.30))
     assert summary.used == ["KRW-AAA"]
     assert summary.excluded == {
         "invalidFormat": 0,
         "minPeriod": 1,
-        "stablecoin": 1,
+        "pegged": 1,
         "minQuoteVolume": 0,
         "maxMissingRatio": 0,
     }

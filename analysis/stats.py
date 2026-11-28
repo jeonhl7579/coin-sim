@@ -12,6 +12,7 @@ import pandas as pd
 
 from analysis.archetypes import ARCHETYPES, classify
 from analysis.clean import CleanParams, CleanSummary, clean_all
+from analysis.crash import crash_episodes, wick_ratios
 from analysis.market import beta, index_weights, leave_one_out, market_index
 from analysis.raw import INTERIM_DIR, RAW_DIR, candle_dir, list_markets, read_candles
 from analysis.regimes import STATES, centered_trend, label_regimes, runs, switch_ratios
@@ -31,9 +32,9 @@ from analysis.shocks import (
 class StatsParams:
     """[임시값]은 전체 수집 뒤 다시 확인한다 (progress.md)."""
 
-    # 상태 구분 (D-68) [임시값]: 가운데 7일 창, 진입 ±9% (데이터상 횡보 약 45%)
+    # 상태 구분 (D-68, D-79) [임시값]: 가운데 7일 창, 진입 ±11% (전체 데이터에서 횡보 약 45%)
     regime_window: int = 168
-    regime_enter: float = 0.09
+    regime_enter: float = 0.11
     # 수익률 조각 (D-69) [임시값]: 36시간 저장, 엔진이 12~36시간으로 잘라 씀
     segment_hours: int = 36
     segments_per_pool: int = 770
@@ -59,6 +60,13 @@ class StatsParams:
     baseline_samples: int = 3000
     alpha: float = 0.05
     bootstrap: int = 200
+    # 폭락형 (D-72·D-77) [임시값]: 고유 움직임 600시간 누적 −50% 이하, 코인당 최대 3구간,
+    # 이후 300시간 회복 기록, 구간 안 수익률이 있는 시간 90% 이상
+    crash_window: int = 600
+    crash_threshold: float = -0.5
+    crash_recovery_hours: int = 300
+    crash_max_per_coin: int = 3
+    crash_min_coverage: float = 0.9
 
 
 def quantiles(values: list[float] | np.ndarray, grid: tuple[float, ...]) -> dict:
@@ -88,6 +96,7 @@ class CoreContext:
     coin_beta: dict[str, float]
     coin_std: dict[str, dict[str, float]]
     idio: dict[str, pd.Series]
+    returns: pd.DataFrame
 
 
 def quote_volume_frame(
@@ -205,7 +214,7 @@ def build_core(
             for m in used
         },
     }
-    context = CoreContext(market, labels, archetype_of, coin_beta, coin_std, coin_idio)
+    context = CoreContext(market, labels, archetype_of, coin_beta, coin_std, coin_idio, returns)
     return CoreStats(stats, report, context)
 
 
@@ -275,6 +284,66 @@ def build_shocks(context: CoreContext, params: StatsParams) -> tuple[dict, dict]
     return stats, report
 
 
+def build_crash(
+    context: CoreContext, frames: dict[str, pd.DataFrame], params: StatsParams
+) -> tuple[dict, dict, dict]:
+    """6.2c: (crash 성격 통계, 성격별 꼬리 통계, report)."""
+    grid = params.quantile_grid
+    rng = np.random.default_rng(params.seed + 2)
+    episodes = []
+    overall_std: dict[str, float] = {}
+    for coin, idio in context.idio.items():
+        overall_std[coin] = float(idio.std(ddof=0))
+        episodes += crash_episodes(
+            coin,
+            idio,
+            params.crash_window,
+            params.crash_threshold,
+            params.crash_recovery_hours,
+            params.crash_max_per_coin,
+            params.crash_min_coverage,
+        )
+    sources = sorted({e.source for e in episodes})
+    pieces: list[Segment] = []
+    for e in episodes:
+        z = e.returns / overall_std[e.source]
+        flat = pd.Series("crash", index=z.index)
+        pieces += cut_segments(z, flat, params.segment_hours, e.source).get("crash", [])
+    pool = sample_pool(pieces, params.segments_per_pool, rng)
+    recoveries = [e.recovery for e in episodes if e.recovery is not None]
+    crash = {
+        "drawdown": quantiles([e.drawdown for e in episodes], grid),
+        "recovery": quantiles(recoveries, grid),
+        "volatility": quantiles([overall_std[c] for c in sources], grid),
+        "segments": [list(seg.points) for seg in pool],
+    }
+
+    wick: dict[str, dict] = {}
+    for archetype in ARCHETYPES:
+        members = [c for c, a in context.archetype_of.items() if a == archetype]
+        by_state: dict[str, list[np.ndarray]] = {s: [] for s in STATES}
+        for coin in members:
+            for state, values in wick_ratios(
+                frames[coin], context.returns[coin].dropna(), context.labels
+            ).items():
+                by_state[state].append(values)
+        wick[archetype] = {
+            s: quantiles(np.concatenate(v) if v else np.array([]), grid)
+            for s, v in by_state.items()
+        }
+
+    report = {
+        "episodes": len(episodes),
+        "sources": len(sources),
+        "recoveryKnown": len(recoveries),
+        "recoveryPositiveShare": float(np.mean([r > 0 for r in recoveries])) if recoveries else 0.0,
+        "pool": pool_summary(pool),
+        "bySource": {c: sum(1 for e in episodes if e.source == c) for c in sources},
+        "years": pd.Series([e.end.year for e in episodes]).value_counts().sort_index().to_dict(),
+    }
+    return crash, wick, report
+
+
 def merge_shocks(core_stats: dict, shock_stats: dict) -> dict:
     """data-spec 4.2 경로로 합친다: archetypes.<a>.shock, marketShock, propagation."""
     merged = json.loads(json.dumps(core_stats))
@@ -321,6 +390,22 @@ def print_shocks(stats: dict, report: dict) -> None:
     print(f"[stats]   config로 넘김: {p['toConfig']}")
 
 
+def print_crash(crash: dict, wick: dict, report: dict) -> None:
+    d = crash["drawdown"]["v"]
+    r = crash["recovery"]["v"]
+    print(
+        f"[stats] 폭락 구간 {report['episodes']}개 (코인 {report['sources']}개), "
+        f"하락 중앙값 {d[4] * 100:.0f}% (최악 {d[0] * 100:.0f}%), "
+        f"이후 300시간 회복 중앙값 {r[4] * 100:+.0f}% "
+        f"(양수 비율 {report['recoveryPositiveShare']:.2f}), "
+        f"조각 {report['pool']}"
+    )
+    print(f"[stats]   폭락 구간이 끝난 해 {report['years']}")
+    for archetype, by_state in wick.items():
+        text = " ".join(f"{s}={q['v'][4]:.2f}" for s, q in by_state.items() if q["v"])
+        print(f"[stats]   꼬리 중앙값(÷ 1시간 변동성) {archetype:<7} {text}")
+
+
 def print_report(core: CoreStats) -> None:
     r = core.report
     s = core.stats
@@ -356,12 +441,17 @@ def main() -> None:
         raise RuntimeError("build_core가 중간 값을 돌려주지 않았다")
     shock_stats, shock_report = build_shocks(core.context, params)
     stats = merge_shocks(core.stats, shock_stats)
+    crash, wick, crash_report = build_crash(core.context, frames, params)
+    stats["archetypes"]["crash"] = crash
+    for archetype, by_state in wick.items():
+        stats["archetypes"][archetype]["wick"] = by_state
     INTERIM_DIR.mkdir(parents=True, exist_ok=True)
     path = INTERIM_DIR / "stats_preview.json"
-    report = {**core.report, "shocks": shock_report}
+    report = {**core.report, "shocks": shock_report, "crash": crash_report}
     path.write_text(json.dumps({"stats": stats, "report": report}, ensure_ascii=False) + "\n")
     print_report(core)
     print_shocks(shock_stats, shock_report)
+    print_crash(crash, wick, crash_report)
     print(f"[stats] → data/interim/{path.name} ({path.stat().st_size / 1e6:.1f}MB)")
 
 
