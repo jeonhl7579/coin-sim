@@ -431,11 +431,24 @@ def print_report(core: CoreStats) -> None:
         print(f"[stats]   조각 {group:<7} {text}")
 
 
-def main() -> None:
-    markets = list_markets(RAW_DIR)
-    frames = {m: read_candles(candle_dir(RAW_DIR) / f"{m}.csv") for m in markets}
-    summary = clean_all(frames, CleanParams())
-    params = StatsParams()
+@dataclass
+class AllStats:
+    """6.2 전체 결과. stats는 data-spec 4.2 모양(내보내기 전), report는 로컬 확인용."""
+
+    summary: CleanSummary
+    core: CoreStats
+    stats: dict
+    report: dict
+
+
+def compute_all(
+    frames: dict[str, pd.DataFrame],
+    clean_params: CleanParams | None = None,
+    params: StatsParams | None = None,
+) -> AllStats:
+    clean_params = clean_params or CleanParams()
+    params = params or StatsParams()
+    summary = clean_all(frames, clean_params)
     core = build_core(summary, frames, params)
     if core.context is None:
         raise RuntimeError("build_core가 중간 값을 돌려주지 않았다")
@@ -445,13 +458,33 @@ def main() -> None:
     stats["archetypes"]["crash"] = crash
     for archetype, by_state in wick.items():
         stats["archetypes"][archetype]["wick"] = by_state
+    report = {
+        **core.report,
+        "shocks": shock_report,
+        "crash": crash_report,
+        "shockPrint": shock_stats,
+        "wickPrint": wick,
+    }
+    return AllStats(summary, core, stats, report)
+
+
+def read_frames() -> dict[str, pd.DataFrame]:
+    return {m: read_candles(candle_dir(RAW_DIR) / f"{m}.csv") for m in list_markets(RAW_DIR)}
+
+
+def main() -> None:
+    result = compute_all(read_frames())
     INTERIM_DIR.mkdir(parents=True, exist_ok=True)
     path = INTERIM_DIR / "stats_preview.json"
-    report = {**core.report, "shocks": shock_report, "crash": crash_report}
-    path.write_text(json.dumps({"stats": stats, "report": report}, ensure_ascii=False) + "\n")
-    print_report(core)
-    print_shocks(shock_stats, shock_report)
-    print_crash(crash, wick, crash_report)
+    report = {k: v for k, v in result.report.items() if not k.endswith("Print")}
+    path.write_text(
+        json.dumps({"stats": result.stats, "report": report}, ensure_ascii=False) + "\n"
+    )
+    print_report(result.core)
+    print_shocks(result.report["shockPrint"], result.report["shocks"])
+    print_crash(
+        result.stats["archetypes"]["crash"], result.report["wickPrint"], result.report["crash"]
+    )
     print(f"[stats] → data/interim/{path.name} ({path.stat().st_size / 1e6:.1f}MB)")
 
 

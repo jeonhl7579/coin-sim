@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "bench": "vitest bench --run --passWithNoTests",
-    "collect": "tsx --env-file=.env scripts/collect.ts"
+    "collect": "tsx --env-file=.env scripts/collect.ts",
+    "stats": "uv run --env-file .env python -m analysis.build"
   },
   "dependencies": {
     "react": "^19.3.1",

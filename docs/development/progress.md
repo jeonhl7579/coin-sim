@@ -3,7 +3,7 @@
 세션을 시작할 때 먼저 읽는 인계 문서다. **상태만** 적는다. 결정과 근거는 [decisions.md](decisions.md), 플레이테스트 결과는 [PLAYTEST.md](../PLAYTEST.md), 데이터 형식은 [data-spec.md](data-spec.md)에 두고 여기서는 링크만 한다.
 
 - 형식: 로컬 `prompts/stage_dev_prompt.md`의 "인계 문서" (`prompts/`는 git에서 제외, 로컬과 저장소 밖 백업에만 있음)
-- 마지막 갱신: 2026-11-28 (2번 작업 6.2c, 전체 수집 완료, 기준값 조정)
+- 마지막 갱신: 2026-11-28 (2번 작업 7단계: 통계 v1 내보내기)
 
 ---
 
@@ -12,8 +12,8 @@
 | 단계 | 상태 | 작업 프롬프트 | 비고 |
 |---|---|---|---|
 | 0. 프로젝트 셋업 | 완료 (2026-11-24, `v0.0`) | `prompts/setup_prompt.md` | 결정 D-22~D-54. 릴리스 PR #3 |
-| 1. 데이터 수집 | 완료 (원본 로컬) | `prompts/data_pipeline_prompt.md` | 전체 302개 수집 완료(2026-11-27, 요청 37,102건, 1시간 18분, 560MB) |
-| 2. 통계 추출 | 대기 | 같음 | 통계 JSON 스키마 v1 |
+| 1. 데이터 수집 | 완료 (원본 로컬) | `prompts/data_pipeline_prompt.md` | 전체 302개 수집 완료(2026-11-27, 요청 37,102건, 1시간 18분, 560MB). 백업: `~/projects/coin-sim-data-backup/raw-2026-11-28/` (체크섬 확인) |
+| 2. 통계 추출 | 완료 | 같음 | 통계 JSON 스키마 v1 (`data/stats/stats.json`) |
 | 3. 생성 엔진 | 대기 | `prompts/stage_dev_prompt.md` | 2단계 스키마 v1 이후 |
 | 4~8 | 대기 | 같음 | |
 
@@ -41,7 +41,7 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 | 4. 수집기 개발 | 완료 | `scripts/collect.ts`, `scripts/collect/`. 마켓 목록 → 나눠 받기·요청 제한(초당 8회, 429·418·5xx 처리) → CSV 저장·이어 받기·중복 제거 → 빈 구간 보고서. data-spec 2장 |
 | 5. 시범 수집 (10개) | 완료 | 캔들 48만 8,990개, 요청 1,652건, 3분 28초. 끊고 다시 실행해서 이어 받기, 다시 실행해도 같은 파일 확인. 결과는 [data-spec.md](data-spec.md) 부록 A |
 | 6. 통계 추출 | 진행 중 | 6.1 정제 완료(`analysis/clean.py`, D-64~D-67). 시범 10개 중 8개 사용(HAEDAL 기간 부족, USDT 스테이블코인). 6.2a 시장 지수·상태·β·변동성·조각·성격 완료(`analysis/stats.py` 등, D-68~D-72). 6.2b 급등락·전파 완료(`analysis/shocks.py`, D-73~D-75). 정제에 호가 단위 잡음 규칙 추가(D-76). 6.2c 폭락형·캔들 꼬리 완료(`analysis/crash.py`, D-77·D-78). 전체 데이터로 기준값 조정(D-79): 사용 239개 |
-| 7. 스키마 v1 확정과 내보내기 | 대기 | |
+| 7. 스키마 v1 확정과 내보내기 | 완료 | `npm run stats` → `data/stats/stats.json`(gzip 1.15MB, 사용 239개), fixture, `src/engine/statsSchema.ts`(D-80). data-spec v1 확정 |
 | 8. 전체 수집 (백그라운드) | 완료 (앞당겨 실행) | 302개 모두 성공, 캔들 7,878,151개. 성격 그룹 최소 3개를 채우려고 6.2a 뒤에 실행 |
 | 9. 마무리 | 대기 | |
 
@@ -74,11 +74,9 @@ PR은 3개로 나눈다: `dev/feat/data-spec`(2·3) → `dev/feat/data-collect`(
 
 | 언제 | 할 일 | 관련 |
 |---|---|---|
-| 2번 작업 7단계 | fixtures·통계 파일을 넣으면 `tests/fixtures/.gitkeep`, `data/stats/.gitkeep` 삭제 | |
-| 2번 작업 7단계, 7단계 | 런타임 검증 라이브러리(zod 등)를 쓸지 판단 (통계 JSON, 기록) | |
-| 지금 | 전체 원본(`data/raw/`, 560MB)을 저장소 밖에 백업 (상장 폐지 코인은 다시 받을 수 없음) | data-spec 1장 |
+| 3단계, 7단계 | 런타임 검증: 통계 JSON은 쓰지 않기로 함(D-80). `loadStats()`에서 깊은 검증이 필요한지, 기록(localStorage) 검증을 어떻게 할지 | D-80 |
 | 3단계 | `loadStats()`와, 그 파일 밖의 동적 `import()`를 금지하는 ESLint 규칙 (2번 작업에서 넘김, 2026-11-26) | conventions 2장 |
-| 3단계 | 실제 이름 해시로 가상 코인 이름 거르기 (data-spec 5장 계약) | D-61 |
+| 3단계 | 실제 이름 해시로 가상 코인 이름 거르기. data-spec 5장 고정 예시 4개를 TS 테스트로 맞춘다 | D-61 |
 | 3·5단계 | fast-check, @testing-library/user-event 설치 (쓰는 단계에서) | |
 | 5단계 | `vite:preloadError` 처리 (S-03) | conventions 5장, D-06 |
 | 8단계 | ErrorPage 문구 다듬기 (지금은 임시 문구) | D-34 |

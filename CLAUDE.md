@@ -52,6 +52,7 @@ npm run bench          # 시세 생성·틱 처리 벤치마크
 npm run format         # Prettier로 고치기
 npm run format:check   # Prettier 검사 (CI)
 npm run collect        # tsx --env-file=.env scripts/collect.ts
+npm run stats          # 원본 → 통계 JSON과 fixture (uv run --env-file .env python -m analysis.build, data-spec 7장)
 
 uv run ruff check analysis && uv run ruff format analysis
 uv run pytest analysis

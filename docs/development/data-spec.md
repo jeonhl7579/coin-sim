@@ -3,7 +3,7 @@
 게임으로 들어가는 데이터의 계약이다. 수집기(`scripts/collect.ts`)와 통계 추출(`analysis/`)은 이 명세를 채우고, 엔진(`src/engine`)은 이 명세대로 읽는다.
 
 - 작성일: 2026-11-26
-- 상태: **초안** (2번 작업 3단계). 시범 수집과 통계 결과를 본 뒤 2번 작업 7단계에서 v1로 확정한다
+- 상태: **v1 확정** (2026-11-28, 2번 작업 7단계). `schemaVersion` 1, `src/engine/statsSchema.ts`와 같다. 바꾸는 기준은 6장
 - 관련 문서: [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md) 3·4장, [FEATURES.md](../FEATURES.md) F-01~11, [conventions.md](conventions.md) 9장, [decisions.md](decisions.md) D-55~D-63
 - 표기: **[추측]**, **[임시값]**, **[테스트 후 결정]**은 기획 문서와 같다. **[분석 후 결정]** = 2번 작업 6단계(통계 추출)에서 데이터를 보고 정한다
 - 범위 밖: GameWorld와 localStorage 기록 형식은 3번 작업이 이 문서에 장을 추가한다
@@ -189,7 +189,8 @@ data/raw/
 | 성격 키 | `leader`(대장)·`large`(대형)·`mid`(중형)·`small`(소형·밈)·`crash`(폭락형) |
 | 수익률 | 단순 수익률(비율). `0.01` = +1%. 캔들 1개 = 1시간 |
 | 분위수 | `{ "p": [...], "v": [...] }`. `p`는 `meta.quantileGrid`와 같고, 엔진은 사이 값을 선형 보간해 뽑는다. 격자 `[0, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 1]` **[임시값]** (0과 1은 최소·최대) |
-| 숫자 | 유효 숫자 자릿수 **[분석 후 결정]** (크기와 재현성) |
+| 숫자 | 실수는 유효숫자 4자리 **[임시값]**, 정수는 그대로. NaN·무한대가 있으면 내보내기 실패 (D-80) |
+| 직렬화 | 키 정렬, 공백 없는 JSON, UTF-8, 마지막 줄바꿈. 같은 원본이면 바이트 단위로 같다 |
 
 ### 4.2 구조
 
@@ -315,7 +316,15 @@ data/raw/
 | 해시 `fnv1a32` | 정규화한 문자열의 UTF-8 바이트에 FNV-1a 32비트. 부호 없는 정수 |
 | `values` | 중복을 없애고 오름차순 정렬 |
 | 엔진의 의무 | 가상 코인의 티커와 이름(표시하는 모든 언어)을 같은 방식으로 정규화·해시하고, `values`에 있으면 그 후보를 버리고 다시 만든다 |
-| 테스트 | `analysis`: 같은 입력에서 Python과 TS의 해시가 같은지 고정 예시로 검사. `engine`: fixtures의 해시 목록으로 거르는지 검사 |
+| 테스트 | 아래 고정 예시를 Python(`analysis/test_realnames.py`)과 TS(3번 작업) 모두 통과해야 한다. `engine`은 fixtures의 해시 목록으로 거르는지 검사한다 |
+| TS 구현 | `text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')`, 해시는 `TextEncoder` 바이트에 `h ^= b; h = Math.imul(h, 0x01000193) >>> 0` (시작값 `0x811c9dc5`) |
+
+| 입력 | 정규화 | 해시 |
+|---|---|---|
+| `Coin Sim` | `coinsim` | 1311849331 |
+| `가상 코인-1` | `가상코인1` | 1208305740 |
+| `ＡＢＣ²` | `abc2` | 2553554107 |
+| `Ünïcode Café` | `ünïcodecafé` | 548853471 |
 
 - 해시는 쉽게 거꾸로 찾을 수 있다(짧은 티커). 목적은 비밀 유지가 아니라 **읽을 수 있는 목록을 저장소에 두지 않는 것**이다.
 - 해시가 겹쳐서 실제와 다른 이름이 버려지는 일은 다시 만들면 되므로 문제가 없다.
@@ -332,9 +341,18 @@ data/raw/
 
 ---
 
-## 7. 다시 만드는 명령 (예정)
+## 7. 다시 만드는 명령
 
-원본에서 `stats.json`까지 명령 하나로 다시 만든다. 2번 작업 7단계에서 정하고 CLAUDE.md 명령어에 추가한다.
+```bash
+npm run collect   # 수집: data/raw/ 이어 받기 (data-spec 2장)
+npm run stats     # 원본 → 정제 → 통계 → 가공 기준 검사 → data/stats/stats.json, tests/fixtures/stats.small.json
+```
+
+- `npm run stats` = `uv run --env-file .env python -m analysis.build` (`analysis/build.py`). 전체 데이터에서 약 20초.
+- 가공 기준(4.3)을 하나라도 어기면 아무 파일도 쓰지 않고 종료 코드 1로 끝난다. 검사 순서: 정의한 키만(1·4) → 허용한 곳의 문자열만, 실제 이름 302개와 대조(2·3) → 그룹·조각 출처 3개 이상(5·6) → gzip 2MB 이하(7).
+- fixture는 같은 코드로 만들고 조각 묶음마다 2개, 이름 해시 10개만 남긴다 (구조가 항상 같음). 손으로 고치지 않는다 (`.prettierignore`).
+- 확인용 중간 결과: `uv run python -m analysis.clean`(제외 목록), `uv run python -m analysis.stats`(수치 출력) → `data/interim/` (로컬).
+- 원본 백업: `/Users/jeonsehyeon/projects/coin-sim-data-backup/raw-2026-11-28/` (2026-11-28, 저장소 밖).
 
 ---
 
@@ -441,5 +459,6 @@ FEATURES와 OVERVIEW 3장에서 엔진이 쓰는 값을 거꾸로 뽑았다. 상
 | 2026-11-28 | 3.1 정제 규칙 추가, 4.4 제외 이유 키 5개로 (6.1) |
 | 2026-11-28 | 4.2 급등락(`shock`, `marketShock`)과 전파(`propagation`) 필드, 정의, 구분 안 되는 값은 config (6.2b) |
 | 2026-11-28 | 3.1에 호가 단위 잡음 규칙 추가 |
+| 2026-11-28 | **v1 확정** (7단계): 숫자 4자리·직렬화 규칙, 5장 고정 예시와 TS 구현, 7장 명령 |
 | 2026-11-28 | 4.2 폭락형(`crash`)·캔들 꼬리(`wick`) 필드 (6.2c). 전체 데이터로 기준값 조정: 상태 ±11%, 가격 고정형 "또는" 규칙과 키 `pegged`, 거래대금 3억 원 |
 | 2026-11-28 | 4.2 `regimes.transition`·`initial` → `switch`(상태 비율은 config), 조각 36시간과 엔진의 12~36시간 계약, 변동성 분위수, 시장 지수·β·상태·성격 방법, 분위수 격자 (6.2a) |
